@@ -30,10 +30,10 @@ try {
     }
     $compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
     if (-not (Test-Path $compiler)) { throw 'Inno Setup 6 compiler is required on an authorized build machine' }
-    & $compiler "/DAppVersion=$Version" "/DPublishDir=$publish" "/DOutputDir=$dist" installer/LumenSnap.iss
+    & $compiler "/DAppVersion=$Version" "/DPublishDir=$publish" "/DOutputDir=$dist" installer/LumenSnap.iss | Tee-Object "artifacts/inno-$Version.txt"
     if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed' }
     Compress-Archive -Path "$publish/*" -DestinationPath "$dist/LumenSnap-Portable-$Version-win-x64.zip" -Force
-    $manifest = [ordered]@{ source=$source; version=$Version; os=[System.Runtime.InteropServices.RuntimeInformation]::OSDescription; sdk=(& dotnet --version); inno=(Get-Item $compiler).VersionInfo.FileVersion; unsigned=$true; runtime=(Get-Content "$publish/LumenSnap.runtimeconfig.json" -Raw | ConvertFrom-Json) }
+    $manifest = [ordered]@{ source=$source; version=$Version; os=[System.Runtime.InteropServices.RuntimeInformation]::OSDescription; osCaption=(Get-CimInstance Win32_OperatingSystem).Caption; sdk=(& dotnet --version); inno=((Get-Content "artifacts/inno-$Version.txt" | Select-Object -First 8) -join "`n"); unsigned=$true; runtime=(Get-Content "$publish/LumenSnap.runtimeconfig.json" -Raw | ConvertFrom-Json) }
     $manifest | ConvertTo-Json -Depth 10 | Set-Content "$dist/build-$Version.json" -Encoding utf8
     Get-ChildItem "$dist/*-$Version-win-x64.*" | Get-FileHash -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLowerInvariant())  $(Split-Path $_.Path -Leaf)" } | Set-Content "$dist/SHA256SUMS-$Version.txt" -Encoding utf8
 } finally { Pop-Location }

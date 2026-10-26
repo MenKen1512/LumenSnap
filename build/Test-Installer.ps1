@@ -9,7 +9,8 @@ $installed = Join-Path $env:LOCALAPPDATA 'Programs/LumenSnap'
 $settingsDir = Join-Path $env:LOCALAPPDATA 'LumenSnap'
 $exe = Join-Path $installed 'LumenSnap.exe'
 function Run-Checked([string]$file, [string[]]$arguments, [string]$name) {
-    $p = Start-Process -FilePath $file -ArgumentList $arguments -Wait -PassThru -WindowStyle Hidden
+    $p = Start-Process -FilePath $file -ArgumentList $arguments -PassThru -WindowStyle Hidden
+    if (-not $p.WaitForExit(180000)) { $p.Kill($true); throw "$name timed out" }
     if ($p.ExitCode -ne 0) { throw "$name failed: $($p.ExitCode)" }
 }
 function Smoke-Installed([string]$label) {
@@ -35,6 +36,11 @@ Smoke-Installed 'upgraded-start'
 $resident = Start-Process $exe -PassThru -WindowStyle Hidden
 Start-Sleep -Milliseconds 1200
 if ($resident.HasExited) { throw 'Tray app exited on launch' }
+$resident.Refresh()
+$cpuStart = $resident.TotalProcessorTime.TotalMilliseconds
+Start-Sleep -Seconds 2
+$resident.Refresh()
+$idle = @{ sampleSeconds=2; cpuMilliseconds=($resident.TotalProcessorTime.TotalMilliseconds - $cpuStart); workingSetBytes=$resident.WorkingSet64; handles=$resident.HandleCount }
 $second = Start-Process $exe -PassThru -WindowStyle Hidden
 if (-not $second.WaitForExit(10000) -or $second.ExitCode -ne 0) { throw 'Second instance did not exit cleanly' }
 Run-Checked $exe @('--quit') 'tray quit'
@@ -47,4 +53,4 @@ Run-Checked "$repo/artifacts/dist/LumenSnap-Setup-$Version-win-x64.exe" @('/VERY
 Smoke-Installed 'reinstalled-start'
 Run-Checked "$installed/unins000.exe" @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/PURGESETTINGS=1',"/LOG=`"$out/purge-uninstall.log`"") 'purge uninstall'
 if (Test-Path "$settingsDir/settings.json") { throw 'Explicit settings purge failed' }
-@{ source=(& git -C $repo rev-parse HEAD).Trim(); version=$Version; previous=$PreviousVersion; status='PASS'; os=[System.Runtime.InteropServices.RuntimeInformation]::OSDescription; note='Disposable hosted runner, NOT clean Windows 11 or manual acceptance' } | ConvertTo-Json | Set-Content "$out/installer-result.json" -Encoding utf8
+@{ source=(& git -C $repo rev-parse HEAD).Trim(); version=$Version; previous=$PreviousVersion; status='PASS'; os=[System.Runtime.InteropServices.RuntimeInformation]::OSDescription; osCaption=(Get-CimInstance Win32_OperatingSystem).Caption; idle=$idle; note='Disposable hosted runner, NOT clean Windows 11 or manual acceptance' } | ConvertTo-Json | Set-Content "$out/installer-result.json" -Encoding utf8

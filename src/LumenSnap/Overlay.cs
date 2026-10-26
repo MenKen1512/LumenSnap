@@ -28,6 +28,7 @@ internal sealed class Overlay : Window
     private string? drag;
     private Tool tool = Tool.Arrow;
     private Annotation defaults = new();
+    private readonly Dictionary<Tool, Annotation> toolDefaults = [];
     private double uiScale = 1;
     private Workspace workspace = new(1, new Vector(), default);
     private bool closing;
@@ -38,7 +39,7 @@ internal sealed class Overlay : Window
     internal Overlay(BitmapSource image, Rect desktop, Settings settings, Action<Settings> settingsChanged)
     {
         this.frozen = image; this.desktop = desktop; this.settings = settings; this.settingsChanged = settingsChanged;
-        defaults = new Annotation { Color = settings.Color, Width = settings.Width, Font = settings.Font, FontSize = settings.FontSize, Glow = settings.Glow };
+        defaults = new Annotation { Color = settings.Color, Width = settings.Width, Font = settings.Font, FontSize = settings.FontSize, Glow = settings.Glow, Background = true };
         Title = "LumenSnap — Захват"; WindowStyle = WindowStyle.None; ResizeMode = ResizeMode.NoResize;
         ShowInTaskbar = false; Topmost = true; Background = Brushes.Black; Content = canvas;
         canvas.Width = image.PixelWidth; canvas.Height = image.PixelHeight;
@@ -54,7 +55,7 @@ internal sealed class Overlay : Window
             b.FontSize = 22; b.FontWeight = i < 3 ? FontWeights.SemiBold : FontWeights.Normal; tools.Add(t, b); v.Children.Add(b);
         }
         var options = Theme.Button("●", "Цвет и параметры", ShowProperties); options.Foreground = Theme.Accent; v.Children.Add(options);
-        vertical = Theme.Surface(v); vertical.Width = 52; vertical.Height = 344; canvas.Children.Add(vertical);
+        vertical = Theme.Surface(v); vertical.Width = 52; vertical.Height = 316; canvas.Children.Add(vertical);
         var h = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
         undo = Theme.Button("↶", "Отменить · Ctrl+Z", Undo); redo = Theme.Button("↷", "Повторить · Ctrl+Y", Redo);
         h.Children.Add(undo); h.Children.Add(redo); h.Children.Add(Theme.Button("▤", "Печать · Ctrl+P", Print));
@@ -97,6 +98,8 @@ internal sealed class Overlay : Window
     {
         CommitText();
         if (tool == next) { ShowProperties(); return; }
+        toolDefaults[tool] = defaults;
+        defaults = toolDefaults.GetValueOrDefault(next, defaults);
         tool = next; selected = null; Refresh(); scene.Focus();
     }
     private void MouseDownOnImage(object sender, MouseButtonEventArgs e)
@@ -344,12 +347,14 @@ internal sealed class Overlay : Window
         CommitText(); if (properties != null) properties.IsOpen = false;
         try
         {
+            Topmost = false;
             var dialog = new PrintDialog(); if (dialog.ShowDialog() != true) return;
             var bitmap = Export(); var image = new Image { Source = bitmap, Stretch = Stretch.Uniform, Width = dialog.PrintableAreaWidth, Height = dialog.PrintableAreaHeight };
             image.Measure(new Size(image.Width, image.Height)); image.Arrange(new Rect(0, 0, image.Width, image.Height));
             dialog.PrintVisual(image, "LumenSnap"); scene.Focus();
         }
         catch (Exception e) { Error("Не удалось напечатать. " + e.Message); }
+        finally { if (!closing) { Topmost = true; Activate(); scene.Focus(); } }
     }
     private void Error(string message) { status.Text = message; status.Visibility = Visibility.Visible; }
 
@@ -397,9 +402,14 @@ internal sealed class Overlay : Window
     internal void PrepareSmokeScene(bool editText = false)
     {
         selection = new Rect(100, 100, 650, 400);
+        if (document.Items.Length > 0)
+        {
+            selected = document.Items.Last(x => x.Tool == Tool.Text); tool = Tool.Text; Refresh();
+            if (editText) BeginText(selected); return;
+        }
         document.Put(new Annotation { Tool = Tool.Arrow, Box = new Rect(180, 180, 240, 110), Points = [new(180, 180), new(420, 290)] });
         document.Put(new Annotation { Tool = Tool.Pencil, Box = new Rect(200, 380, 170, 35), Points = [new(200, 400), new(240, 380), new(290, 415), new(370, 390)], Color = "#FFD166" });
-        var text = new Annotation { Tool = Tool.Text, Box = new Rect(380, 320, 320, 140), Text = "Привет, LumenSnap!\nРедактируемый текст", FontSize = 26, Bold = true, Color = "#FFFFFF" };
+        var text = new Annotation { Tool = Tool.Text, Box = new Rect(380, 320, 320, 140), Text = "Привет, LumenSnap!\nРедактируемый текст", FontSize = 26, Bold = true, Color = "#FFFFFF", Background = true };
         document.Put(text); selected = text; tool = Tool.Text; Refresh();
         if (editText) BeginText(text);
     }

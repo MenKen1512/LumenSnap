@@ -60,6 +60,17 @@ internal static class Smoke
             });
             Check("native-image-clipboard-roundtrip", () => { Clipboard.SetImage(overlay.Export()); var read = Clipboard.GetImage(); Require(read != null && read.PixelWidth == 650 && read.PixelHeight == 400, "CF_BITMAP round trip"); });
             Check("in-place-cyrillic-text-editor-render", () => { overlay.PrepareSmokeScene(true); Pump(); Require(Keyboard.FocusedElement is TextBox, "TextBox receives keyboard focus"); Rendering.Save(overlay.RenderUi(), Path.Combine(output, "text-editor-ui.png")); });
+            Check("native-text-copy-retains-capture-and-Escape-commits-once", () =>
+            {
+                var text = (TextBox)Keyboard.FocusedElement; text.Select(0, 6);
+                ApplicationCommands.Copy.Execute(null, text);
+                Require(Clipboard.GetText() == "Привет", "Native TextBox copy preserves Cyrillic characters");
+                Require(overlay.IsVisible && overlay.Document.Items.Length == 3, "Text copy does not rasterize, close or duplicate objects");
+                var escape = new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(overlay), 0, Key.Escape) { RoutedEvent = Keyboard.PreviewKeyDownEvent };
+                overlay.RaiseEvent(escape); Pump();
+                Require(escape.Handled && overlay.IsVisible && Keyboard.FocusedElement is not TextBox, "First Escape leaves text editing only");
+                Require(overlay.Document.Items.Length == 3, "Re-editing commits one existing object");
+            });
             overlay.Close(); overlay = null; Pump();
             Check("real-desktop-overlay-open-close", () =>
             {

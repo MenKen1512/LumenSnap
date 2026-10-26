@@ -99,13 +99,14 @@ public static class PanelLayout
     }
     public static PanelPlacement Place(Rect s, Rect monitor, double scale = 1)
     {
-        double vw = 52 * scale, vh = 344 * scale, hw = 386 * scale, hh = 52 * scale;
+        double vw = 52 * scale, vh = 316 * scale, hw = 386 * scale, hh = 52 * scale;
         double gap = 8 * scale, between = 6 * scale;
         // Try right/below, left/below, right/above and left/above. Panels never cover selected pixels.
         foreach (bool left in new[] { false, true })
         foreach (bool above in new[] { false, true })
         {
-            double vx = left ? s.Left - gap - vw : s.Right + gap;
+            double vx = left ? Math.Min(s.Left - gap - vw, monitor.Right - hw - between - vw)
+                : Math.Max(s.Right + gap, monitor.Left + hw + between);
             double hy = above ? s.Top - gap - hh : Math.Max(s.Bottom + gap, monitor.Top + vh - hh + gap);
             double hx = left ? vx + vw + between : vx - between - hw;
             hx = Math.Clamp(hx, monitor.Left, Math.Max(monitor.Left, monitor.Right - hw));

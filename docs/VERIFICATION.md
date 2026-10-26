@@ -1,28 +1,44 @@
 # Verification status
 
-Implementation is a preview. CI availability was actually verified by run
-[40389443223](https://github.com/MenKen1512/LumenSnap/actions/runs/40389443223)
-at source `82486e31c8cd74b7facdd4bc159990769ec8d236`. This probe is not an app test.
-The implementation's exact-source results will be attached to PR #2 and release.
+Implementation is a preview. Actual Windows CI availability was verified by run
+[40389443223](https://github.com/MenKen1512/LumenSnap/actions/runs/40389443223).
+The first full installer lifecycle passed in run
+[40391401113](https://github.com/MenKen1512/LumenSnap/actions/runs/40391401113)
+at source `cbcca8011029b6e344d63083ac7a0c46339b0c76`: 25 unit/component checks,
+7 installed-application smoke checks per install (previous / upgraded / reinstalled),
+and the install/start/upgrade/uninstall/reinstall lifecycle passed.
+This is predecessor evidence; the release's exact-source evidence is its attached
+build manifest, unit log, installer-result.json and smoke.json, not this baseline.
 No Windows 11 manual acceptance, MENKEN-PC installation, code-signing or Lightshot
 performance comparison has been performed.
 
 | Acceptance IDs | Current state | Required evidence |
 | --- | --- | --- |
-| T-01, T-03 | NOT RUN | Actual overlay UI and interactive selection |
-| T-02 | NOT RUN | Exterior workspace and edge placement; see ARCHITECTURE.md |
-| T-04, T-05 | NOT RUN | Preview/export shapes and visual review |
-| T-06, T-07, T-20 | NOT RUN | Cyrillic/IME input, native text commands, Escape hierarchy |
-| T-08, T-09 | NOT RUN | Clipboard success and locked clipboard recovery |
-| T-10, T-13, T-15 | NOT RUN | Cancel/error paths in actual Windows dialogs |
-| T-11, T-12 | NOT RUN | Exact-pixel image encode/decode and no UI artifacts |
-| T-14 | NOT RUN | Object/text/style history and interactive text undo |
-| T-16, T-17 | NOT RUN | Hotkey registration, replacement conflicts and physical input |
-| T-18 | NOT RUN | Side-by-side Lightshot on separately authorized environment |
-| T-19, T-25 | NOT RUN | Actual multiple monitors and 125–200% DPI visual/input checks |
-| T-21 | NOT RUN | Disconnected-machine operation; source has no network client |
-| T-22 | NOT RUN | Tray shutdown and second instance |
-| T-23, T-24 | NOT RUN | Installed EXE lifecycle and upgrade, then clean Windows 11 check |
+| T-01 | PARTIAL | Actual WPF overlay render/open/close passed; manual region input pending |
+| T-02 | PARTIAL | Exterior workspace/edge arithmetic tests; manual corner input pending |
+| T-03 | PARTIAL | Aligned compact panels seen in actual rendered UI; manual acceptance pending |
+| T-04 | PARTIAL | Arrow glow exported and visible in PNG; broader bright/dark review pending |
+| T-05 | PARTIAL | Geometry/hit tests and pencil render; all-tool manual operation pending |
+| T-06 | PARTIAL | Cyrillic multiline TextBox render; actual typing/IME/restyling acceptance pending |
+| T-07 | PARTIAL | Focus policy unit check; native Copy command in latest smoke; physical Ctrl+C pending |
+| T-08 | PARTIAL | Native Windows image clipboard roundtrip; external-app paste pending |
+| T-09 | NOT RUN | Real cross-process clipboard lock/retry |
+| T-10 | NOT RUN | Cancel native Save As dialog with edits |
+| T-11 | PARTIAL | Exact pixel crop/PNG roundtrip without UI passed; manual screenshot comparison pending |
+| T-12 | PARTIAL | JPEG/BMP decode and dimensions passed; manual visual comparison pending |
+| T-13 | PARTIAL | Failed atomic save preserves original; actual error dialog input pending |
+| T-14 | PARTIAL | Model creation/style/move/delete/undo/redo; native text input regression pending |
+| T-15 | NOT RUN | Physical printer / native Print dialog cancellation |
+| T-16 | PARTIAL | Native registration passed; physical key and restart interaction pending |
+| T-17 | PARTIAL | Native conflict preserves existing registration; interactive settings pending |
+| T-18 | NOT RUN | Side-by-side Lightshot in separately authorized environment |
+| T-19 | PARTIAL | Negative coordinates/DPI math tested; actual mixed-DPI monitors pending |
+| T-20 | PARTIAL | Focus policy, latest first-Escape routed check, repeated overlay close; physical sequence pending |
+| T-21 | PARTIAL | No network client/dependency in source; disconnected-machine test pending |
+| T-22 | PARTIAL | Hosted tray start/second invocation/quit passed; manual tray menu pending |
+| T-23 | PARTIAL | Hosted Server installation/start/uninstall passed; clean Windows 11 NOT RUN |
+| T-24 | PARTIAL | Real older-version fixture upgraded, settings retained; clean Windows 11 NOT RUN |
+| T-25 | PARTIAL | Native focus styles and DPI arithmetic; 125–200% real rendering/input NOT RUN |
 
 Source-level tests and automated runner checks may justify PARTIAL status for
 manual scenarios. They cannot alone justify PASS for the full scenario. Stable

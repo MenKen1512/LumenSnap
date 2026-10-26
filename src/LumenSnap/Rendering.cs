@@ -16,7 +16,14 @@ public static class Rendering
             if (a.Points.Length == 0) return g;
             c.BeginFigure(a.Points[0], false, false);
             if (a.Tool == Tool.Pencil)
-                c.PolyLineTo(a.Points.Skip(1).ToArray(), true, true);
+            {
+                for (int i = 1; i < a.Points.Length - 1; i++)
+                {
+                    var midpoint = new Point((a.Points[i].X + a.Points[i + 1].X) / 2, (a.Points[i].Y + a.Points[i + 1].Y) / 2);
+                    c.QuadraticBezierTo(a.Points[i], midpoint, true, true);
+                }
+                if (a.Points.Length > 1) c.LineTo(a.Points[^1], true, true);
+            }
             else
             {
                 Point end = a.Points[^1]; c.LineTo(end, true, false);

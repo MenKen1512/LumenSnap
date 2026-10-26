@@ -29,6 +29,12 @@ internal static class Tests
         Test("aligned compact outside panels", () => { var s = new Rect(100, 100, 650, 400); var p = PanelLayout.Place(s, new(0, 0, 1280, 900)); Assert(p.Visible); Assert(p.Vertical.Bottom == p.Horizontal.Bottom); Assert(p.Vertical.Left - p.Horizontal.Right == 6); Assert(!p.Vertical.IntersectsWith(s) && !p.Horizontal.IntersectsWith(s)); });
         Test("panel edge fallback is visible and outside", () => { var s = new Rect(600, 400, 650, 400); var p = PanelLayout.Place(s, new(0, 0, 1280, 900)); Assert(p.Visible); Assert(!p.Vertical.IntersectsWith(s) && !p.Horizontal.IntersectsWith(s)); });
         Test("full-desktop impossible geometry is explicit", () => Assert(!PanelLayout.Place(new(0, 0, 1280, 900), new(0, 0, 1280, 900)).Visible));
+        Test("small selections at all corners retain aligned controls", () =>
+        {
+            var monitor = new Rect(0, 0, 1280, 900);
+            foreach (var s in new[] { new Rect(0, 0, 30, 30), new Rect(1250, 0, 30, 30), new Rect(0, 870, 30, 30), new Rect(1250, 870, 30, 30) })
+            { var view = PanelLayout.WorkspaceFor(s, monitor, monitor, 1); Assert(view.Panels.Visible); Assert(view.Panels.Vertical.Bottom == view.Panels.Horizontal.Bottom); }
+        });
         Test("full-screen editing workspace keeps pixels and panels separate", () =>
         {
             var image = new Rect(0, 0, 1280, 900); var view = PanelLayout.WorkspaceFor(image, image, image, 1);

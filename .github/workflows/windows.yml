@@ -12,6 +12,8 @@ concurrency:
 jobs:
   build-test-package:
     runs-on: windows-2025
+    permissions:
+      contents: write
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -33,6 +35,12 @@ jobs:
       - name: Install, start, upgrade, uninstall, reinstall on disposable runner
         shell: pwsh
         run: ./build/Test-Installer.ps1
+      - name: Publish unsigned preview only after current-source installer verification
+        if: github.event_name == 'push'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./build/Publish-Preview.ps1
       - name: Preserve exact-source evidence and distributables
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
