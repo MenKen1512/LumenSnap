@@ -10,7 +10,7 @@ performance comparison has been performed.
 | Acceptance IDs | Current state | Required evidence |
 | --- | --- | --- |
 | T-01, T-03 | NOT RUN | Actual overlay UI and interactive selection |
-| T-02 | KNOWN LIMITATION | Exterior panel space; see ARCHITECTURE.md |
+| T-02 | NOT RUN | Exterior workspace and edge placement; see ARCHITECTURE.md |
 | T-04, T-05 | NOT RUN | Preview/export shapes and visual review |
 | T-06, T-07, T-20 | NOT RUN | Cyrillic/IME input, native text commands, Escape hierarchy |
 | T-08, T-09 | NOT RUN | Clipboard success and locked clipboard recovery |

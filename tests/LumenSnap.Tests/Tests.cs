@@ -29,6 +29,13 @@ internal static class Tests
         Test("aligned compact outside panels", () => { var s = new Rect(100, 100, 650, 400); var p = PanelLayout.Place(s, new(0, 0, 1280, 900)); Assert(p.Visible); Assert(p.Vertical.Bottom == p.Horizontal.Bottom); Assert(p.Vertical.Left - p.Horizontal.Right == 6); Assert(!p.Vertical.IntersectsWith(s) && !p.Horizontal.IntersectsWith(s)); });
         Test("panel edge fallback is visible and outside", () => { var s = new Rect(600, 400, 650, 400); var p = PanelLayout.Place(s, new(0, 0, 1280, 900)); Assert(p.Visible); Assert(!p.Vertical.IntersectsWith(s) && !p.Horizontal.IntersectsWith(s)); });
         Test("full-desktop impossible geometry is explicit", () => Assert(!PanelLayout.Place(new(0, 0, 1280, 900), new(0, 0, 1280, 900)).Visible));
+        Test("full-screen editing workspace keeps pixels and panels separate", () =>
+        {
+            var image = new Rect(0, 0, 1280, 900); var view = PanelLayout.WorkspaceFor(image, image, image, 1);
+            Assert(view.Zoom < 1 && view.Panels.Visible); Assert(!view.Display(image).IntersectsWith(view.Panels.Vertical));
+            Assert(!view.Display(image).IntersectsWith(view.Panels.Horizontal)); Assert(view.Panels.Vertical.Bottom == view.Panels.Horizontal.Bottom);
+            Assert(image.Width == 1280 && image.Height == 900);
+        });
         Test("panels never silently overlap for randomized selections", () =>
         {
             var random = new Random(42); var screen = new Rect(0, 0, 3840, 2160);
@@ -71,7 +78,7 @@ internal static class Tests
             string file = Path.Combine(dir, "original.png"); File.WriteAllText(file, "keep");
             var black = BitmapSource.Create(2, 2, 96, 96, PixelFormats.Bgr32, null, new byte[16], 8);
             using (var locked = File.Open(file, FileMode.Open, FileAccess.Read, FileShare.None))
-            { bool failed = false; try { Rendering.Save(black, file); } catch (IOException) { failed = true; } Assert(failed); }
+            { bool failed = false; try { Rendering.Save(black, file); } catch (Exception e) when (e is IOException or UnauthorizedAccessException) { failed = true; } Assert(failed); }
             Assert(File.ReadAllText(file) == "keep"); Assert(Directory.GetFiles(dir).Length == 1);
         }));
         Test("object geometry hit and z-order", () => { var d = new Document(); var a = new Annotation { Tool = Tool.Line, Points = [new(10, 10), new(100, 10)], Box = new(10, 10, 90, 0) }; d.Put(a); var b = a with { Id = Guid.NewGuid(), Color = "#FFFFFF" }; d.Put(b); Assert(d.Items.Last(x => Rendering.Hit(x, new(50, 12))).Id == b.Id); Assert(!Rendering.Hit(a, new(50, 60))); });

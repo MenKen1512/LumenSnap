@@ -78,8 +78,25 @@ public static class Coordinates
 }
 
 public readonly record struct PanelPlacement(Rect Vertical, Rect Horizontal, bool Visible);
+public readonly record struct Workspace(double Zoom, Vector Offset, PanelPlacement Panels)
+{
+    public Rect Display(Rect source) => new(source.X * Zoom + Offset.X, source.Y * Zoom + Offset.Y, source.Width * Zoom, source.Height * Zoom);
+}
 public static class PanelLayout
 {
+    public static Workspace WorkspaceFor(Rect selection, Rect image, Rect monitor, double scale)
+    {
+        var ordinary = Place(selection, monitor, scale);
+        if (ordinary.Visible && Math.Abs(ordinary.Vertical.Bottom - ordinary.Horizontal.Bottom) < .01) return new(1, new Vector(), ordinary);
+        // Show the whole frozen desktop with exterior workspace when selected pixels fill a display.
+        // Only the editing view is scaled; the document and export always retain physical pixels.
+        double margin = 16 * scale;
+        double zoom = Math.Min(1, Math.Min((monitor.Width - 52 * scale - 3 * margin) / image.Width,
+            (monitor.Height - 52 * scale - 3 * margin) / image.Height));
+        zoom = Math.Max(.05, zoom);
+        var view = new Workspace(zoom, new Vector(monitor.X + margin, monitor.Y + margin), default);
+        return view with { Panels = Place(view.Display(selection), monitor, scale) };
+    }
     public static PanelPlacement Place(Rect s, Rect monitor, double scale = 1)
     {
         double vw = 52 * scale, vh = 344 * scale, hw = 386 * scale, hh = 52 * scale;
@@ -89,7 +106,7 @@ public static class PanelLayout
         foreach (bool above in new[] { false, true })
         {
             double vx = left ? s.Left - gap - vw : s.Right + gap;
-            double hy = above ? s.Top - gap - hh : s.Bottom + gap;
+            double hy = above ? s.Top - gap - hh : Math.Max(s.Bottom + gap, monitor.Top + vh - hh + gap);
             double hx = left ? vx + vw + between : vx - between - hw;
             hx = Math.Clamp(hx, monitor.Left, Math.Max(monitor.Left, monitor.Right - hw));
             double vy = hy + hh - vh;

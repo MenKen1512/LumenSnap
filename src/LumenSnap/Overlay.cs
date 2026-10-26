@@ -29,6 +29,7 @@ internal sealed class Overlay : Window
     private Tool tool = Tool.Arrow;
     private Annotation defaults = new();
     private double uiScale = 1;
+    private Workspace workspace = new(1, new Vector(), default);
     private bool closing;
     internal Document Document => document;
     internal Rect Selection => selection;
@@ -198,7 +199,7 @@ internal sealed class Overlay : Window
             AcceptsReturn = true, AcceptsTab = false, TextWrapping = TextWrapping.Wrap, TextAlignment = a.Alignment,
             Width = a.Box.Width, Height = a.Box.Height, VerticalScrollBarVisibility = ScrollBarVisibility.Auto
         };
-        Canvas.SetLeft(editor, a.Box.X); Canvas.SetTop(editor, a.Box.Y); canvas.Children.Add(editor);
+        PositionEditor(); canvas.Children.Add(editor);
         editor.TextChanged += (_, _) => { if (editor != null && selected != null) selected = selected with { Text = editor.Text }; };
         Refresh(); editor.Focus(); editor.CaretIndex = editor.Text.Length;
     }
@@ -213,6 +214,13 @@ internal sealed class Overlay : Window
             selected = next.Text.Length > 0 ? next : null;
         }
         canvas.Children.Remove(editor); editor = null; textOriginal = null; scene.Focus(); Refresh();
+    }
+    private void PositionEditor()
+    {
+        if (editor == null || selected == null) return;
+        Canvas.SetLeft(editor, selected.Box.X * workspace.Zoom + workspace.Offset.X);
+        Canvas.SetTop(editor, selected.Box.Y * workspace.Zoom + workspace.Offset.Y);
+        editor.RenderTransform = new ScaleTransform(workspace.Zoom, workspace.Zoom);
     }
     private void Undo() { CommitText(); document.Undo(); selected = null; Refresh(); }
     private void Redo() { CommitText(); document.Redo(); selected = null; Refresh(); }
@@ -361,7 +369,14 @@ internal sealed class Overlay : Window
             var b = screen.Bounds; var monitor = new Rect(b.X - desktop.X, b.Y - desktop.Y, b.Width, b.Height);
             var handle = Native.MonitorFromPoint(new Native.NativePoint { X = b.X + 1, Y = b.Y + 1 }, 2);
             try { if (Native.GetDpiForMonitor(handle, 0, out uint dpi, out _) == 0) uiScale = dpi / 96d; } catch (DllNotFoundException) { uiScale = 1; }
-            var placement = PanelLayout.Place(selection, monitor, uiScale);
+            if (drag == null)
+            {
+                workspace = PanelLayout.WorkspaceFor(selection, ImageBounds, monitor, uiScale);
+                var transform = new TransformGroup(); transform.Children.Add(new ScaleTransform(workspace.Zoom, workspace.Zoom));
+                transform.Children.Add(new TranslateTransform(workspace.Offset.X, workspace.Offset.Y)); scene.RenderTransform = transform;
+                PositionEditor();
+            }
+            var placement = PanelLayout.Place(workspace.Display(selection), monitor, uiScale);
             if (placement.Visible)
             {
                 vertical.LayoutTransform = horizontal.LayoutTransform = new ScaleTransform(uiScale, uiScale);
@@ -373,6 +388,7 @@ internal sealed class Overlay : Window
                 vertical.Visibility = horizontal.Visibility = Visibility.Collapsed;
                 status.Text = "Недостаточно места вне области для панелей. Уменьшите область. Ctrl+C — копировать · Ctrl+S — сохранить · Ctrl+P — печать · Esc — отмена";
             }
+            if (workspace.Zoom < 1 && placement.Visible) status.Text = $"Вид {workspace.Zoom:P0}; экспорт — исходные пиксели. " + status.Text;
         }
         scene.InvalidateVisual();
     }

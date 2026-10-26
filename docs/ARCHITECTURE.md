@@ -27,8 +27,10 @@ monitor DPI. Negative virtual origins are translated once at the capture boundar
 Display topology changes cancel stale capture. Real mixed-DPI acceptance remains
 required; arithmetic tests alone do not prove it.
 
-Known geometric boundary: if the selection consumes the available screen there
-is no exterior space for toolbars. Preview hides both rather than covering image
-pixels; capture shortcuts remain available. Some edge fallbacks lose aligned
-bottoms. These are disclosed gaps against the full P0 design gate, not a stable
-release claim. A later workspace-with-margins view can resolve the full-screen case.
+When selection consumes the available display, a workspace scales only the editing
+view and reserves exterior margins for aligned panels. Scene coordinates stay in
+physical pixels; WPF inverse transforms map input back to the unchanged document.
+Export never uses the scaled scene. On viewports physically smaller than the
+panels themselves, keyboard operations remain available; those viewports require
+separate accessibility/design work. Real mixed-DPI and pointer acceptance remains
+required before stable release.
