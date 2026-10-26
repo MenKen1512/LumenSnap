@@ -1,0 +1,18 @@
+name: Windows
+on:
+  push:
+    branches: [codex/windows-offline-preview]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  availability:
+    runs-on: windows-2025
+    timeout-minutes: 5
+    steps:
+      - name: Verify actual Windows executor
+        shell: pwsh
+        run: |
+          Get-CimInstance Win32_OperatingSystem | Select-Object Caption, Version
+          dotnet --info
