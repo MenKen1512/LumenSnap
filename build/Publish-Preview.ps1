@@ -10,7 +10,8 @@ try {
     $smoke = Get-Content artifacts/installer-evidence/upgraded-start/smoke.json -Raw | ConvertFrom-Json
     if (@($smoke.results | Where-Object status -ne 'PASS').Count -ne 0 -or $smoke.source -notlike "*$sha") { throw 'Current-source application evidence required' }
     Compress-Archive -Path artifacts/installer-evidence,artifacts/unit-tests.txt,artifacts/environment.txt -DestinationPath artifacts/dist/LumenSnap-Evidence-0.1.0-win-x64.zip -Force
-    Copy-Item docs/USER_GUIDE_RU.md,docs/VERIFICATION.md -Destination artifacts/dist
+    Copy-Item docs/USER_GUIDE_RU.md artifacts/dist/LumenSnap-User-Guide-RU-0.1.0.md
+    Copy-Item docs/VERIFICATION.md artifacts/dist/LumenSnap-Verification-0.1.0.md
     $files = Get-ChildItem artifacts/dist/*0.1.0* -File | Where-Object Name -notlike 'SHA256SUMS*'
     $files | Get-FileHash -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLowerInvariant())  $(Split-Path $_.Path -Leaf)" } | Set-Content artifacts/dist/SHA256SUMS-0.1.0.txt -Encoding utf8
     $notes = @"

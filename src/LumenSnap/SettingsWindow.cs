@@ -37,7 +37,7 @@ internal sealed class SettingsWindow : Window
         Label("Если клавиша занята, прежнее сочетание сохранится. Клавиши производителя доступны только если Windows получает событие клавиатуры.");
         stack.Children.Add(Theme.Button("Сохранить", "Сохранить настройки", () =>
         {
-            if (!Settings.ValidColor(color.Text) || !double.TryParse(width.Text, out double w) || w is < 1 or > 40 || !double.TryParse(size.Text, out double s) || s is < 8 or > 200 || string.IsNullOrWhiteSpace(font.Text))
+            if (!Settings.ValidColor(color.Text) || !double.TryParse(width.Text, out double w) || !double.IsFinite(w) || w is < 1 or > 40 || !double.TryParse(size.Text, out double s) || !double.IsFinite(s) || s is < 8 or > 200 || !Settings.ValidFont(font.Text))
             { error.Text = "Проверьте цвет #RRGGBB, толщину 1–40 и размер 8–200."; return; }
             var next = current with { HotkeyCode = key, HotkeyModifiers = mods, StartAtLogin = login.IsChecked == true,
                 Notifications = notifications.IsChecked == true, Glow = glow.IsChecked == true, Color = color.Text, Width = w, Font = font.Text, FontSize = s };

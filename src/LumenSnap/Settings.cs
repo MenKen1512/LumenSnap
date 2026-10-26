@@ -24,13 +24,15 @@ public sealed record Settings
         {
             var s = JsonSerializer.Deserialize<Settings>(File.ReadAllText(path ?? DefaultPath));
             if (s is null || s.Schema != 1 || !ValidColor(s.Color) || !double.IsFinite(s.Width) || s.Width is < 1 or > 40 ||
-                !double.IsFinite(s.FontSize) || s.FontSize is < 8 or > 200 || string.IsNullOrWhiteSpace(s.Font) || s.Font.Length > 200 ||
+                !double.IsFinite(s.FontSize) || s.FontSize is < 8 or > 200 || !ValidFont(s.Font) ||
                 s.Format is < 1 or > 3 || s.HotkeyCode is < 1 or > 254 || s.HotkeyModifiers > 15) return new();
             return s;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or ArgumentException) { return new(); }
     }
     public static bool ValidColor(string? value) => value is { Length: 7 } && value[0] == '#' && value.Skip(1).All(Uri.IsHexDigit);
+    // Font input is a local family name, never a URI, file or downloaded font resource.
+    public static bool ValidFont(string? value) => !string.IsNullOrWhiteSpace(value) && value.Length <= 200 && !value.Any(c => char.IsControl(c) || c is ':' or '/' or '\\' or '#');
     public void Save(string? path = null)
     {
         path ??= DefaultPath; Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);

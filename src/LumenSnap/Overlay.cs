@@ -197,7 +197,8 @@ internal sealed class Overlay : Window
         editor = new TextBox
         {
             Text = a.Text, FontFamily = new FontFamily(a.Font), FontSize = a.FontSize, FontWeight = a.Bold ? FontWeights.Bold : FontWeights.Normal,
-            Foreground = Rendering.Brush(a.Color), Background = a.Background ? Theme.Panel : Brushes.Transparent,
+            Foreground = Rendering.Brush(a.Color), Background = a.Background ? new SolidColorBrush(Color.FromArgb(200, 16, 24, 38)) : Brushes.Transparent,
+            CaretBrush = Theme.Foreground, SelectionBrush = Theme.Accent, SelectionOpacity = .45,
             BorderBrush = Theme.Accent, BorderThickness = new Thickness(1), Padding = new Thickness(3),
             AcceptsReturn = true, AcceptsTab = false, TextWrapping = TextWrapping.Wrap, TextAlignment = a.Alignment,
             Width = a.Box.Width, Height = a.Box.Height, VerticalScrollBarVisibility = ScrollBarVisibility.Auto
@@ -258,7 +259,7 @@ internal sealed class Overlay : Window
                 editor.FontFamily = new FontFamily(selected.Font); editor.FontSize = selected.FontSize;
                 editor.FontWeight = selected.Bold ? FontWeights.Bold : FontWeights.Normal;
                 editor.TextAlignment = selected.Alignment; editor.Foreground = Rendering.Brush(selected.Color);
-                editor.Background = selected.Background ? Theme.Panel : Brushes.Transparent;
+                editor.Background = selected.Background ? new SolidColorBrush(Color.FromArgb(200, 16, 24, 38)) : Brushes.Transparent;
             }
             else document.Put(selected);
         }
@@ -295,7 +296,7 @@ internal sealed class Overlay : Window
         {
             Label("Шрифт");
             var fonts = new ComboBox { ItemsSource = Fonts.SystemFontFamilies.Select(x => x.Source).OrderBy(x => x).ToArray(), Text = active.Font, IsEditable = true }; stack.Children.Add(fonts);
-            fonts.LostKeyboardFocus += (_, _) => { if (!string.IsNullOrWhiteSpace(fonts.Text)) ChangeStyle(a => a with { Font = fonts.Text }); };
+            fonts.LostKeyboardFocus += (_, _) => { if (Settings.ValidFont(fonts.Text)) ChangeStyle(a => a with { Font = fonts.Text }); else fonts.Text = (selected ?? defaults).Font; };
             Label("Размер текста (пиксели)");
             var size = new TextBox { Text = active.FontSize.ToString("0"), ToolTip = "Размер: 8–200" }; stack.Children.Add(size);
             size.LostKeyboardFocus += (_, _) => { if (double.TryParse(size.Text, out double fs) && fs is >= 8 and <= 200) ChangeStyle(a => a with { FontSize = fs }); };
