@@ -9,8 +9,10 @@ $installed = Join-Path $env:LOCALAPPDATA 'Programs/LumenSnap'
 $settingsDir = Join-Path $env:LOCALAPPDATA 'LumenSnap'
 $exe = Join-Path $installed 'LumenSnap.exe'
 function Run-Checked([string]$file, [string[]]$arguments, [string]$name) {
-    $p = Start-Process -FilePath $file -ArgumentList $arguments -PassThru -WindowStyle Hidden
-    if (-not $p.WaitForExit(180000)) { $p.Kill($true); throw "$name timed out" }
+    Write-Host "Checking: $name"
+    # Inno's uninstaller delegates work to a temporary child. -Wait waits for the
+    # process tree; Process.WaitForExit alone can race a subsequent reinstall.
+    $p = Start-Process -FilePath $file -ArgumentList $arguments -Wait -PassThru -WindowStyle Hidden
     if ($p.ExitCode -ne 0) { throw "$name failed: $($p.ExitCode)" }
 }
 function Smoke-Installed([string]$label) {
