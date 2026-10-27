@@ -17,7 +17,9 @@ internal sealed class Overlay : Window
     private Settings settings;
     private readonly Border vertical, horizontal;
     private readonly Button undo, redo, closeCapture;
+    private readonly System.Windows.Shapes.Ellipse colorPreview = new() { Width = 14, Height = 14, Stroke = Theme.Foreground, StrokeThickness = 1 };
     private Tool? paintedTool;
+    private string? displayedColor;
     private static readonly Brush ActiveTool = Rendering.Brush("#305B7E"), PrimaryTool = Rendering.Brush("#20364C"), SecondaryTool = Rendering.Brush("#1B2A3B");
     private readonly Dictionary<Tool, Button> tools = [];
     private readonly TextBlock status = new() { Foreground = Brushes.White, Background = Theme.Panel, Padding = new Thickness(8), TextWrapping = TextWrapping.Wrap, MaxWidth = 650 };
@@ -55,7 +57,8 @@ internal sealed class Overlay : Window
             var b = Theme.Toolbar(Theme.Icon(t.ToString()), names[i] + "; повторное нажатие — свойства", () => SelectTool(t));
             tools.Add(t, b); v.Children.Add(b);
         }
-        var options = Theme.Toolbar(new System.Windows.Shapes.Ellipse { Width = 14, Height = 14, Fill = Rendering.Brush(defaults.Color), Stroke = Theme.Foreground, StrokeThickness = 1 }, "Цвет и параметры", ShowProperties); v.Children.Add(options);
+        colorPreview.Fill = Rendering.Brush(defaults.Color);
+        var options = Theme.Toolbar(colorPreview, "Цвет и параметры", ShowProperties); v.Children.Add(options);
         vertical = Theme.Surface(v); vertical.Width = ToolbarMetrics.VerticalWidth; vertical.Height = ToolbarMetrics.VerticalHeight; canvas.Children.Add(vertical);
         var h = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
         undo = Theme.Toolbar(Theme.Icon("Undo"), "Отменить · Ctrl+Z", Undo); redo = Theme.Toolbar(Theme.Icon("Redo"), "Повторить · Ctrl+Y", Redo);
@@ -331,6 +334,8 @@ internal sealed class Overlay : Window
             button.BorderBrush = t == tool ? Theme.Accent : Brushes.Transparent;
         }
         paintedTool = tool;
+        string color = (selected ?? defaults).Color;
+        if (displayedColor != color) { colorPreview.Fill = Rendering.Brush(color); displayedColor = color; }
         vertical.Visibility = horizontal.Visibility = HasSelection && drag is not "select" ? Visibility.Visible : Visibility.Collapsed;
         status.Text = HasSelection ? "Пробел + перетаскивание: переместить область · ПКМ: выбрать объект · двойной щелчок: текст · Ctrl+C / Ctrl+S · Esc" : "Выделите область мышью · Esc — отмена";
         if (HasSelection)

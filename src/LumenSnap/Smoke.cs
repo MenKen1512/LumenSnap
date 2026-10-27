@@ -18,10 +18,11 @@ internal static class Smoke
             try { body(); results.Add(new { name, status = "PASS", milliseconds = watch.Elapsed.TotalMilliseconds }); }
             catch (Exception e) { results.Add(new { name, status = "FAIL", error = e.ToString() }); throw; }
         }
-        var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown }; Theme.Install(app);
+        var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         var timer = Stopwatch.StartNew(); Overlay? overlay = null; int code = 0;
         try
         {
+            Check("theme-load", () => Theme.Install(app));
             var desktop = Native.Desktop; BitmapSource? native = null;
             Check("native-desktop-capture", () => { native = Native.Capture(desktop); Require(native.PixelWidth == desktop.Width && native.PixelHeight == desktop.Height, "Desktop pixel bounds"); });
             Check("native-hotkey-collision-preserves-old-binding", () =>
@@ -78,7 +79,11 @@ internal static class Smoke
                 var fonts = Descendants<ComboBox>(content).First(x => x.IsEditable);
                 Require(fonts.Text == "Segoe UI", "Editable font selector retains selected value");
                 fonts.IsDropDownOpen = true; Pump(); Require(fonts.IsDropDownOpen && fonts.Items.Count > 0, "Native themed font dropdown opens");
-                fonts.IsDropDownOpen = false; overlay.ClosePropertiesForSmoke(); Pump();
+                fonts.IsDropDownOpen = false;
+                var scroll = Descendants<ScrollViewer>(content).First(); scroll.ScrollToBottom(); Pump();
+                Require(scroll.ScrollableHeight == 0 || scroll.VerticalOffset > 0, "Text formatting controls remain reachable by scrolling");
+                Rendering.Save(RenderElement(content), Path.Combine(output, "text-properties-bottom-ui.png"));
+                overlay.ClosePropertiesForSmoke(); Pump();
             });
             Check("settings-window-structure-and-render", () =>
             {
@@ -86,11 +91,16 @@ internal static class Smoke
                 try
                 {
                     window.Show(); Pump();
-                    Require(Descendants<Button>(window).Any(x => Equals(x.Content, "Сохранить") && x.IsVisible), "Save remains accessible");
-                    Rendering.Save(RenderElement((FrameworkElement)window.Content), Path.Combine(output, "settings-ui.png"));
+                    var root = (FrameworkElement)window.Content;
+                    var save = Descendants<Button>(window).Single(x => Equals(x.Content, "Сохранить"));
+                    var saveBounds = save.TransformToAncestor(root).TransformBounds(new Rect(0, 0, save.ActualWidth, save.ActualHeight));
+                    Require(save.IsVisible && new Rect(0, 0, root.ActualWidth, root.ActualHeight).Contains(saveBounds), "Save is fully within the visible settings client");
+                    // Render the window root: rendering its inset Content alone clips the footer
+                    // and omits the actual window background from the evidence bitmap.
+                    Rendering.Save(RenderElement(window), Path.Combine(output, "settings-ui.png"));
                     var scroll = Descendants<ScrollViewer>(window).First(); scroll.ScrollToBottom(); Pump();
                     Require(scroll.ScrollableHeight == 0 || scroll.VerticalOffset > 0, "Settings content scrolls to the lower sections");
-                    Rendering.Save(RenderElement((FrameworkElement)window.Content), Path.Combine(output, "settings-bottom-ui.png"));
+                    Rendering.Save(RenderElement(window), Path.Combine(output, "settings-bottom-ui.png"));
                 }
                 finally { window.Close(); overlay.Activate(); Pump(); }
             });

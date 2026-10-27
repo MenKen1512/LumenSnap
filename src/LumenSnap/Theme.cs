@@ -49,13 +49,15 @@ internal static class Theme
           <Style TargetType="ComboBox">
             <Setter Property="Foreground" Value="#E6EDF7"/><Setter Property="Background" Value="#111B28"/><Setter Property="BorderBrush" Value="#34455B"/>
             <Setter Property="FontSize" Value="12"/><Setter Property="MinHeight" Value="30"/><Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True"/>
+            <Setter Property="ItemsPanel"><Setter.Value><ItemsPanelTemplate><VirtualizingStackPanel/></ItemsPanelTemplate></Setter.Value></Setter>
             <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ComboBox"><Grid>
               <Border x:Name="Chrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="5"/>
               <ToggleButton Focusable="False" IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"><ToggleButton.Template><ControlTemplate TargetType="ToggleButton"><Border Background="Transparent"><Path Data="M 0,0 L 4,4 L 8,0" Stroke="#96A9C0" StrokeThickness="1.3" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0"/></Border></ControlTemplate></ToggleButton.Template></ToggleButton>
               <ContentPresenter x:Name="Selection" Content="{TemplateBinding SelectionBoxItem}" IsHitTestVisible="False" Margin="9,4,28,4" VerticalAlignment="Center"/>
               <TextBox x:Name="PART_EditableTextBox" Visibility="Hidden" Text="{Binding Text, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Background="Transparent" BorderThickness="0" Margin="1,1,25,1" Padding="7,4"/>
               <Popup x:Name="PART_Popup" IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom" AllowsTransparency="True" Focusable="False" PopupAnimation="None">
-                <Border Background="#172333" BorderBrush="#3B526D" BorderThickness="1" CornerRadius="6" Padding="4" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"><ScrollViewer MaxHeight="240"><ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/></ScrollViewer></Border>
+                <Border Background="#172333" BorderBrush="#3B526D" BorderThickness="1" CornerRadius="6" Padding="4" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"><ScrollViewer MaxHeight="240" CanContentScroll="True"><ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/></ScrollViewer></Border>
               </Popup>
             </Grid><ControlTemplate.Triggers>
               <Trigger Property="IsEditable" Value="True"><Setter TargetName="Selection" Property="Visibility" Value="Hidden"/><Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible"/></Trigger>
