@@ -5,7 +5,7 @@ Repository: MenKen1512/LumenSnap. This is an independent, offline-first Windows 
 ## Authoritative requirements
 
 - Read CODEX_TASK.md, docs/PRODUCT_SPEC.md, docs/DESIGN_SPEC.md and docs/ACCEPTANCE_RELEASE.md before implementing or redefining scope.
-- The user's approved layout has **two distinct compact panels**: vertical drawing tools to the right of the selection, horizontal actions immediately below it, adjacent near the lower-right corner. Both panels stay outside selected pixels.
+- The user's approved layout has **two distinct compact panels**: vertical drawing tools and horizontal actions adjacent near the lower-right corner, with aligned bottoms. Ordinary regions keep panels outside. **User revision 2026-10-27:** when selection covers a monitor/full desktop, move panels inside the selection without scaling the scene. UI must never be exported, including in this internal mode. Use ten named basic colors with no HEX entry; keep menus compact.
 - The primary actions are Copy and Save; the primary drawing tools are freehand Pencil/Marker, Arrow and Text.
 - The first release must include a tested Windows installer executable, plus source and documented build instructions. Do not equate successful compilation with a working installer.
 

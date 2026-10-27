@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <StartupObject>LumenSnap.Program</StartupObject>
+    <AssemblyName>LumenSnap</AssemblyName>
+    <RootNamespace>LumenSnap</RootNamespace>
+    <!-- The host is WPF; WinForms is used only for NotifyIcon. DPI is owned by the manifest. -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
+    <ApplicationIcon>../../artifacts/app.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup><EmbeddedResource Include="../../artifacts/app.ico" LogicalName="LumenSnap.app.ico"/></ItemGroup>
+</Project>

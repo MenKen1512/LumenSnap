@@ -1,0 +1,12 @@
+<Project>
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <Deterministic>true</Deterministic>
+    <Version>0.1.2</Version>
+    <Authors>LumenSnap contributors</Authors>
+    <Copyright>Copyright © 2026 LumenSnap contributors</Copyright>
+    <RepositoryUrl>https://github.com/MenKen1512/LumenSnap</RepositoryUrl>
+  </PropertyGroup>
+</Project>

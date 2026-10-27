@@ -2,6 +2,19 @@
 
 **Stage:** layout and priorities agreed; visual details, iconography and polish are provisional. This is a design-engineering brief, not a claim that the earlier generated mockups are production-ready.
 
+**Latest user revision — 0.1.2, 2026-10-27 (supersedes conflicting earlier rules):**
+When a selection covers a whole monitor or virtual desktop, dock both panels
+inside its lower-right corner with the same aligned bottoms and small gap.
+Keep the scene at 100%; export still contains only frozen pixels and annotations.
+Ordinary regions keep exterior positioning/fallback. The selection frame has a
+thin cyan-to-blue-to-violet gradient core and smoothly fading external glow.
+Buttons use subtle surface gradients, a fine highlight, bounded hover glow and
+brief hover/press transitions (140/200/70 ms), respecting Windows reduced motion.
+Tool popovers are 240 DIP wide, with a compact header, two rows of five named
+colors, inline controls and no HEX field or large nested cards. General settings
+and tray menu follow the same restrained, compact style. Keep all useful text
+formatting controls; do not add decorative placeholder actions.
+
 ## 1. Overall layout
 
 - Display a thin, smooth, softly glowing blue selection frame around the selected screen region; darken the rest of the desktop. Selection content is clear, not permanently blurred.
@@ -25,6 +38,18 @@ Let selection rectangle be (x, y, width, height) in screen logical coordinates, 
 External gap may be around 6-10 device-independent pixels; the gap between separate panel surfaces around 4-8 DIP. These are starting values for visual QA, not fixed physical-pixel coordinates. Handle OS DPI, screen edges, different text sizes and monitor bounds rather than hard-coding a screenshot's coordinates.
 
 ## 2. Size and density
+
+**User-approved revision, 2026-10-27 (supersedes the initial ranges below):**
+reduce the shipped 0.1.0 toolbars by a factor of 1.5. Surface thickness is
+34.67 DIP (previously 52), tool hit area 26.67 DIP (previously 40), vertical
+height 210.67 DIP (previously 316), icons 16 DIP. Copy/Save width is 78.67 DIP.
+Add a compact visible «Закрыть» action immediately after Save; the resulting
+horizontal surface is 306.67 DIP wide. Maintain existing exterior placement,
+aligned bottoms and 6 DIP inter-panel gap. Sizes scale with monitor DPI.
+Vector icons and template-level hover/press/focus must also work on the active
+tool. Selection glow is clipped to the exterior and excluded from exports.
+Tool properties use contextual sections; general settings use labeled cards,
+scrollable content and a fixed Save/Cancel footer.
 
 The product should feel slightly more comfortable than the old Lightshot UI, but not as oversized as the first generated mockup.
 
@@ -61,7 +86,7 @@ Pencil/Arrow/Text hover can produce a small soft glow and a short tooltip; do no
 
 ## 4. Horizontal toolbar
 
-One compact horizontal surface, in this order: Undo, Redo, Print, More (only if it has a real purpose), Copy, Save.
+One compact horizontal surface, in this order: Undo, Redo, Print, More (only if it has a real purpose), Copy, Save, Close. Close cancels the current capture (same result as Esc outside text/properties) and leaves the tray application running.
 
 - All controls clustered together. Compact neutral icon-only buttons on the left; slightly more prominent Copy/Save on the right, within the **same background panel**.
 - Copy and Save are roughly the same visual priority to each other: a contrasting blue-tinted field, clear icon and legible action label; shortcuts Ctrl+C and Ctrl+S can be shown in microcopy only if the density remains balanced, otherwise use tooltips.

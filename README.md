@@ -1,8 +1,14 @@
 # LumenSnap
 
-LumenSnap is a planned, independent Windows screen-capture and annotation application. Its first release focuses on fast region capture, polished offline editing, configurable shortcuts and a real Windows installer.
+LumenSnap is an independent, offline-first Windows screen-capture and annotation application written in C#/.NET 10 and WPF.
 
-**Status:** product/design specification prepared; implementation, native tests and installer are **not yet completed**.
+**Status: implemented preview, not stable.** Self-contained per-user Inno Setup EXE; actual Windows Server runner install/start/upgrade/uninstall/reinstall checks and native WPF/clipboard tests. Full Windows 11 x64 manual acceptance remains **NOT RUN**. No installation or execution on MENKEN-PC.
+
+[Downloads / unsigned prereleases](https://github.com/MenKen1512/LumenSnap/releases) · [Implementation PR #2](https://github.com/MenKen1512/LumenSnap/pull/2) · [Russian user guide](docs/USER_GUIDE_RU.md) · [Build instructions](docs/BUILD.md) · [Verification / limitations](docs/VERIFICATION.md)
+
+Default shortcut: **Ctrl+Alt+S**, configurable in tray settings. The screenshot editor includes selection move/resize, Pencil/Marker, Arrow with exported glow, editable Cyrillic text, line/rectangle/ellipse, object move/resize/delete, Undo/Redo, Copy, Save As (PNG/JPEG/BMP) and Print. Text input keeps its own clipboard and undo commands. When exterior panel space is tight, only the editing view scales; export retains original pixels.
+
+Build on an authorized Windows developer machine with .NET SDK 10 and Inno Setup 6: `./build/Build.ps1 -Version 0.1.2`. Installer lifecycle tests require a disposable authorized Windows VM; see the build guide. Release assets contain exact source SHA, toolchain metadata, checksums and raw test evidence. Runtime is bundled; normal use is offline. Builds are unsigned.
 
 ## Product direction
 

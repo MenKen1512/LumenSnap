@@ -1,0 +1,55 @@
+name: Windows
+on:
+  push:
+    branches: [codex/windows-offline-preview]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build-test-package:
+    runs-on: windows-2025
+    permissions:
+      contents: write
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
+        with:
+          dotnet-version: '10.0.x'
+      - name: Record actual executor and tools
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          Get-CimInstance Win32_OperatingSystem | Select-Object Caption, Version | Out-File artifacts/environment.txt
+          dotnet --info | Out-File artifacts/environment.txt -Append
+      - name: Fetch checksum-pinned published 0.1.1 installer
+        shell: pwsh
+        run: ./build/Get-PreviousInstaller.ps1
+      - name: Unit tests and self-contained Windows installer
+        shell: pwsh
+        run: ./build/Build.ps1 -Version 0.1.2
+      - name: Install, start, upgrade, uninstall, reinstall on disposable runner
+        shell: pwsh
+        run: ./build/Test-Installer.ps1
+      - name: Publish unsigned preview only after current-source installer verification
+        if: github.event_name == 'push'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./build/Publish-Preview.ps1
+      - name: Preserve exact-source evidence and distributables
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: LumenSnap-windows-${{ github.sha }}
+          path: |
+            artifacts/dist/*0.1.2*
+            artifacts/unit-tests.txt
+            artifacts/environment.txt
+            artifacts/installer-evidence/
+          if-no-files-found: warn
+          retention-days: 30
