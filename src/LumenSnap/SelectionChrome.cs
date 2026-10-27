@@ -12,19 +12,28 @@ internal sealed class SelectionChrome
     {
         if (selection != previous || scale != previousScale)
         {
-            var outer = selection; outer.Inflate(10 * scale, 10 * scale);
+            var outer = selection; outer.Inflate(14 * scale, 14 * scale);
             exterior = new CombinedGeometry(GeometryCombineMode.Exclude, new RectangleGeometry(outer), new RectangleGeometry(selection)); exterior.Freeze();
             if (scale != previousScale)
             {
-                pens = new[] { (14d, (byte)10), (10d, (byte)16), (7d, (byte)25), (4d, (byte)45) }.Select(x =>
-                { var b = new SolidColorBrush(Color.FromArgb(x.Item2, 86, 174, 255)); b.Freeze(); var p = new Pen(b, x.Item1 * scale); p.Freeze(); return p; }).ToArray();
-                edge = new Pen(Theme.Accent, scale); edge.Freeze();
+                // Nested gradient strokes approximate a smooth falloff without blurring the desktop.
+                pens = Enumerable.Range(1, 12).Reverse().Select(radius =>
+                { var p = new Pen(Gradient(.09 * Math.Exp(-radius * radius / 24d)), radius * 2 * scale); p.Freeze(); return p; }).ToArray();
+                edge = new Pen(Gradient(.95), scale); edge.Freeze();
             }
             previous = selection; previousScale = scale;
         }
         dc.PushClip(exterior!);
-        foreach (var pen in pens) dc.DrawRoundedRectangle(null, pen, selection, 2 * scale, 2 * scale);
+        foreach (var pen in pens) dc.DrawRoundedRectangle(null, pen, selection, 2.5 * scale, 2.5 * scale);
         dc.Pop();
-        dc.DrawRoundedRectangle(null, edge, selection, 2 * scale, 2 * scale);
+        dc.DrawRoundedRectangle(null, edge, selection, 2.5 * scale, 2.5 * scale);
+    }
+    private static Brush Gradient(double opacity)
+    {
+        var brush = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(1, 1), Opacity = opacity };
+        brush.GradientStops.Add(new GradientStop(Color.FromRgb(112, 243, 225), 0));
+        brush.GradientStops.Add(new GradientStop(Color.FromRgb(107, 194, 255), .42));
+        brush.GradientStops.Add(new GradientStop(Color.FromRgb(155, 131, 255), 1));
+        brush.Freeze(); return brush;
     }
 }

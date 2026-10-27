@@ -77,7 +77,7 @@ public static class Coordinates
     public static Point Dips(Point px, double dpi) => new(px.X * 96 / dpi, px.Y * 96 / dpi);
 }
 
-public readonly record struct PanelPlacement(Rect Vertical, Rect Horizontal, bool Visible);
+public readonly record struct PanelPlacement(Rect Vertical, Rect Horizontal, bool Visible, bool Inside = false);
 public static class ToolbarMetrics
 {
     public const double Density = 2d / 3;
@@ -93,6 +93,7 @@ public static class PanelLayout
 {
     public static Workspace WorkspaceFor(Rect selection, Rect image, Rect monitor, double scale)
     {
+        if (CoversMonitor(selection, monitor)) return new(1, new Vector(), Inside(selection, monitor, scale));
         var ordinary = Place(selection, monitor, scale);
         if (ordinary.Visible && Math.Abs(ordinary.Vertical.Bottom - ordinary.Horizontal.Bottom) < .01) return new(1, new Vector(), ordinary);
         // Show the whole frozen desktop with exterior workspace when selected pixels fill a display.
@@ -103,6 +104,23 @@ public static class PanelLayout
         zoom = Math.Max(.05, zoom);
         var view = new Workspace(zoom, new Vector(monitor.X + margin, monitor.Y + margin), default);
         return view with { Panels = Place(view.Display(selection), monitor, scale) };
+    }
+    public static bool CoversMonitor(Rect selection, Rect monitor) => !selection.IsEmpty &&
+        selection.Left <= monitor.Left + 1 && selection.Top <= monitor.Top + 1 &&
+        selection.Right >= monitor.Right - 1 && selection.Bottom >= monitor.Bottom - 1;
+    public static PanelPlacement Inside(Rect selection, Rect monitor, double scale = 1)
+    {
+        var available = Rect.Intersect(selection, monitor);
+        if (available.IsEmpty) return new(Rect.Empty, Rect.Empty, false, true);
+        double margin = 12 * scale, gap = 6 * scale;
+        var vertical = new Rect(available.Right - margin - ToolbarMetrics.VerticalWidth * scale,
+            available.Bottom - margin - ToolbarMetrics.VerticalHeight * scale,
+            ToolbarMetrics.VerticalWidth * scale, ToolbarMetrics.VerticalHeight * scale);
+        var horizontal = new Rect(vertical.Left - gap - ToolbarMetrics.HorizontalWidth * scale,
+            vertical.Bottom - ToolbarMetrics.HorizontalHeight * scale,
+            ToolbarMetrics.HorizontalWidth * scale, ToolbarMetrics.HorizontalHeight * scale);
+        bool fits = available.Contains(vertical) && available.Contains(horizontal);
+        return fits ? new(vertical, horizontal, true, true) : new(Rect.Empty, Rect.Empty, false, true);
     }
     public static PanelPlacement Place(Rect s, Rect monitor, double scale = 1)
     {

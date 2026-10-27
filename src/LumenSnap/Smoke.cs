@@ -22,7 +22,9 @@ internal static class Smoke
         var timer = Stopwatch.StartNew(); Overlay? overlay = null; int code = 0;
         try
         {
-            Check("theme-load", () => Theme.Install(app));
+            // Force motion in diagnostics so the animated template is tested even on a runner
+            // with OS animations disabled. Normal launch follows the user's Windows preference.
+            Check("theme-load", () => Theme.Install(app, true));
             var desktop = Native.Desktop; BitmapSource? native = null;
             Check("native-desktop-capture", () => { native = Native.Capture(desktop); Require(native.PixelWidth == desktop.Width && native.PixelHeight == desktop.Height, "Desktop pixel bounds"); });
             Check("native-hotkey-collision-preserves-old-binding", () =>
@@ -45,7 +47,7 @@ internal static class Smoke
             var fixture = new RenderTargetBitmap(1280, 900, 96, 96, PixelFormats.Pbgra32); fixture.Render(drawing); fixture.Freeze();
             overlay = new Overlay(fixture, new Rect(0, 0, 1280, 900), new Settings(), _ => { });
             overlay.Show(); Pump(); overlay.PrepareSmokeScene(); Pump();
-            Check("actual-wpf-overlay-render", () => Rendering.Save(overlay.RenderUi(), Path.Combine(output, "application-ui.png")));
+            Check("actual-wpf-overlay-render", () => { Rendering.Save(overlay.RenderUi(), Path.Combine(output, "application-ui.png")); Rendering.Save(overlay.ToolbarPreview(), Path.Combine(output, "toolbar-rest-ui.png")); });
             Check("selection-export-and-unicode-formats", () =>
             {
                 var image = overlay.Export(); Require(image.PixelWidth == 650 && image.PixelHeight == 400, "Exact crop dimensions");
@@ -76,6 +78,13 @@ internal static class Smoke
             {
                 var content = overlay.OpenPropertiesForSmoke(); Pump();
                 Rendering.Save(RenderElement(content), Path.Combine(output, "text-properties-ui.png"));
+                Require(content.ActualWidth <= 240 && content.ActualHeight <= 400, "Compact text properties fit without oversized cards");
+                var palette = Descendants<ColorPalette>(content).Single();
+                Require(palette.Children.Count == 10, "Ten named basic colors");
+                Require(!Descendants<TextBox>(content).Any(x => x.Text.StartsWith('#')), "No HEX input in tool properties");
+                foreach (Button swatch in palette.Children)
+                { swatch.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Require(overlay.Document.Items.Last().Color == palette.SelectedColor, "Palette updates actual editable text"); }
+                ((Button)palette.Children[0]).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 var fonts = Descendants<ComboBox>(content).First(x => x.IsEditable);
                 Require(fonts.Text == "Segoe UI", "Editable font selector retains selected value");
                 fonts.IsDropDownOpen = true; Pump(); Require(fonts.IsDropDownOpen && fonts.Items.Count > 0, "Native themed font dropdown opens");
@@ -92,6 +101,8 @@ internal static class Smoke
                 {
                     window.Show(); Pump();
                     var root = (FrameworkElement)window.Content;
+                    Require(window.Width == 440 && Descendants<ColorPalette>(window).Single().Children.Count == 10, "Compact settings use the same ten-color palette");
+                    Require(!Descendants<TextBox>(window).Any(x => x.Text.StartsWith('#')), "No HEX input in settings");
                     var save = Descendants<Button>(window).Single(x => Equals(x.Content, "Сохранить"));
                     var saveBounds = save.TransformToAncestor(root).TransformBounds(new Rect(0, 0, save.ActualWidth, save.ActualHeight));
                     Require(save.IsVisible && new Rect(0, 0, root.ActualWidth, root.ActualHeight).Contains(saveBounds), "Save is fully within the visible settings client");
@@ -116,15 +127,34 @@ internal static class Smoke
                     var center = button.PointToScreen(new Point(button.ActualWidth / 2, button.ActualHeight / 2));
                     Require(Native.SetCursorPos((int)center.X, (int)center.Y), "Move runner pointer to active tool"); PumpInput();
                     Require(button.IsMouseOver && chrome.Background.ToString() != rest, "Selected tool shows real hover feedback");
+                    var glow = (Border)button.Template.FindName("Glow", button);
+                    Require(glow.Opacity > 0 && DependencyPropertyHelper.GetValueSource(glow, UIElement.OpacityProperty).IsAnimated, "Hover runs a real glow animation");
                     string hover = chrome.Background.ToString(); Rendering.Save(overlay.RenderUi(), Path.Combine(output, "button-hover-ui.png"));
+                    Rendering.Save(overlay.ToolbarPreview(), Path.Combine(output, "toolbar-hover-ui.png"));
                     Native.mouse_event(2, 0, 0, 0, UIntPtr.Zero); PumpInput();
                     Require(button.IsPressed && chrome.Background.ToString() != hover, "Real mouse-down changes button chrome");
+                    var motion = (FrameworkElement)button.Template.FindName("Motion", button);
+                    Require(((ScaleTransform)motion.RenderTransform).ScaleX < .99, "Press runs a scale animation");
                     Rendering.Save(overlay.RenderUi(), Path.Combine(output, "button-pressed-ui.png"));
+                    Rendering.Save(overlay.ToolbarPreview(), Path.Combine(output, "toolbar-pressed-ui.png"));
                     // Release outside to avoid opening the properties popup while testing the button state.
                     Native.SetCursorPos(15, 80); Native.mouse_event(4, 0, 0, 0, UIntPtr.Zero); PumpInput();
                     button.Focus(); Pump(); Require(button.IsKeyboardFocused, "Toolbar supports keyboard focus");
                 }
                 finally { Native.mouse_event(4, 0, 0, 0, UIntPtr.Zero); Native.SetCursorPos(previous.X, previous.Y); }
+            });
+            Check("full-screen-panels-inside-with-original-pixel-export", () =>
+            {
+                overlay.PrepareFullScreenForSmoke(); Pump();
+                var view = overlay.DisplayWorkspace;
+                Require(view.Zoom == 1 && view.Panels.Inside && view.Panels.Visible, "Full screen keeps unscaled scene and internal panels");
+                Require(overlay.Selection.Contains(view.Panels.Vertical) && overlay.Selection.Contains(view.Panels.Horizontal), "Panels are fully within the selected region");
+                Rendering.Save(overlay.RenderUi(), Path.Combine(output, "full-screen-ui.png"));
+                var exported = overlay.Export(); Require(exported.PixelWidth == 1280 && exported.PixelHeight == 900, "Full-screen export preserves original dimensions");
+                var point = view.Panels.Horizontal.BottomRight - new Vector(8, 8);
+                var pixel = new byte[4]; exported.CopyPixels(new Int32Rect((int)point.X, (int)point.Y, 1, 1), pixel, 4, 0);
+                Require(pixel[0] == 0x51 && pixel[1] == 0x3B && pixel[2] == 0x26, "Internal toolbar does not contaminate exported pixels");
+                overlay.RestoreRegionForSmoke(); Pump();
             });
             Check("compact-toolbar-and-close-after-save-cancels-capture", () =>
             {
@@ -152,6 +182,7 @@ internal static class Smoke
                 source = typeof(Smoke).Assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false).Cast<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion,
                 os = System.Runtime.InteropServices.RuntimeInformation.OSDescription,
                 runtime = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription,
+                animationTestMode = "Motion explicitly enabled in smoke only; normal launch honors Windows client-area animation preference",
                 elapsedMs = timer.Elapsed.TotalMilliseconds, results,
                 limitations = "Automated Windows runner smoke, not Windows 11 manual acceptance; synthetic desktop in UI PNGs. No Lightshot performance comparison."
             }, new JsonSerializerOptions { WriteIndented = true }));

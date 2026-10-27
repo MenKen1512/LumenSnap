@@ -64,7 +64,7 @@ internal sealed class Overlay : Window
         undo = Theme.Toolbar(Theme.Icon("Undo"), "Отменить · Ctrl+Z", Undo); redo = Theme.Toolbar(Theme.Icon("Redo"), "Повторить · Ctrl+Y", Redo);
         h.Children.Add(undo); h.Children.Add(redo); h.Children.Add(Theme.Toolbar(Theme.Icon("Print"), "Печать · Ctrl+P", Print));
         foreach (var b in new[] { Theme.Toolbar("Копировать", "Копировать · Ctrl+C", Copy, 118), Theme.Toolbar("Сохранить", "Сохранить как… · Ctrl+S", Save, 118) })
-        { b.Background = Rendering.Brush("#284F76"); b.BorderBrush = Theme.Accent; h.Children.Add(b); }
+        { b.Tag = "primary"; h.Children.Add(b); }
         closeCapture = Theme.Toolbar("Закрыть", "Закрыть захват · Esc", Close, 70); h.Children.Add(closeCapture);
         horizontal = Theme.Surface(h); horizontal.Width = ToolbarMetrics.HorizontalWidth; horizontal.Height = ToolbarMetrics.HorizontalHeight; canvas.Children.Add(horizontal);
         canvas.Children.Add(status); Canvas.SetLeft(status, 16); Canvas.SetTop(status, 16);
@@ -332,6 +332,7 @@ internal sealed class Overlay : Window
         {
             button.Background = t == tool ? ActiveTool : t <= Tool.Text ? PrimaryTool : SecondaryTool;
             button.BorderBrush = t == tool ? Theme.Accent : Brushes.Transparent;
+            button.Tag = t == tool ? "selected" : "tool";
         }
         paintedTool = tool;
         string color = (selected ?? defaults).Color;
@@ -340,7 +341,7 @@ internal sealed class Overlay : Window
         status.Text = HasSelection ? "Пробел + перетаскивание: переместить область · ПКМ: выбрать объект · двойной щелчок: текст · Ctrl+C / Ctrl+S · Esc" : "Выделите область мышью · Esc — отмена";
         if (HasSelection)
         {
-            var screen = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point((int)(desktop.X + selection.Right), (int)(desktop.Y + selection.Bottom)));
+            var screen = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point((int)Math.Ceiling(desktop.X + selection.Right) - 1, (int)Math.Ceiling(desktop.Y + selection.Bottom) - 1));
             var b = screen.Bounds; var monitor = new Rect(b.X - desktop.X, b.Y - desktop.Y, b.Width, b.Height);
             var handle = Native.MonitorFromPoint(new Native.NativePoint { X = b.X + 1, Y = b.Y + 1 }, 2);
             try { if (Native.GetDpiForMonitor(handle, 0, out uint dpi, out _) == 0) uiScale = dpi / 96d; } catch (DllNotFoundException) { uiScale = 1; }
@@ -351,7 +352,7 @@ internal sealed class Overlay : Window
                 transform.Children.Add(new TranslateTransform(workspace.Offset.X, workspace.Offset.Y)); scene.RenderTransform = transform;
                 PositionEditor();
             }
-            var placement = PanelLayout.Place(workspace.Display(selection), monitor, uiScale);
+            var placement = drag == null ? workspace.Panels : PanelLayout.Place(workspace.Display(selection), monitor, uiScale);
             if (placement.Visible)
             {
                 vertical.LayoutTransform = horizontal.LayoutTransform = new ScaleTransform(uiScale, uiScale);
@@ -361,7 +362,7 @@ internal sealed class Overlay : Window
             else
             {
                 vertical.Visibility = horizontal.Visibility = Visibility.Collapsed;
-                status.Text = "Недостаточно места вне области для панелей. Уменьшите область. Ctrl+C — копировать · Ctrl+S — сохранить · Ctrl+P — печать · Esc — отмена";
+                status.Text = "Недостаточно места для панелей. Ctrl+C — копировать · Ctrl+S — сохранить · Ctrl+P — печать · Esc — отмена";
             }
             if (workspace.Zoom < 1 && placement.Visible) status.Text = $"Вид {workspace.Zoom:P0}; экспорт — исходные пиксели. " + status.Text;
         }
@@ -384,6 +385,16 @@ internal sealed class Overlay : Window
         if (editText) BeginText(text);
     }
     internal Button ActiveButton => tools[tool];
+    internal Workspace DisplayWorkspace => workspace;
+    internal void PrepareFullScreenForSmoke() { CommitText(); selection = ImageBounds; selected = null; Refresh(); }
+    internal void RestoreRegionForSmoke() { selection = new Rect(100, 100, 650, 400); PrepareSmokeScene(); }
+    internal BitmapSource ToolbarPreview()
+    {
+        var rect = new Rect(Canvas.GetLeft(horizontal) - 12, Canvas.GetTop(vertical) - 12,
+            ToolbarMetrics.HorizontalWidth * uiScale + ToolbarMetrics.VerticalWidth * uiScale + 30 * uiScale,
+            ToolbarMetrics.VerticalHeight * uiScale + 24 * uiScale);
+        return new CroppedBitmap(RenderUi(), Coordinates.Crop(rect, frozen.PixelWidth, frozen.PixelHeight));
+    }
     internal Button CloseButton => closeCapture;
     internal FrameworkElement OpenPropertiesForSmoke() { ShowProperties(); return (FrameworkElement)properties!.Child; }
     internal void ClosePropertiesForSmoke() { properties!.IsOpen = false; scene.Focus(); }

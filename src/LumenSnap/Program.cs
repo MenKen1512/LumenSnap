@@ -21,7 +21,7 @@ internal static class Program
         using var hotkey = new Hotkey(source);
         using var trayIcon = new System.Drawing.Icon(typeof(Program).Assembly.GetManifestResourceStream("LumenSnap.app.ico") ?? throw new InvalidOperationException("Missing application icon"));
         using var tray = new System.Windows.Forms.NotifyIcon { Icon = trayIcon, Text = "LumenSnap", Visible = true };
-        var menu = new System.Windows.Forms.ContextMenuStrip();
+        var menu = TrayTheme.Menu();
         void Notify(string message)
         { tray.BalloonTipTitle = "LumenSnap"; tray.BalloonTipText = message; tray.ShowBalloonTip(4000); }
         void Persist(Settings next)

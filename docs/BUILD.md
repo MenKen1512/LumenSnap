@@ -8,7 +8,7 @@ Inno; the workflow sets up .NET in its disposable runner. No tools are installed
 on the user's workstation by this workflow.
 
 ```powershell
-./build/Build.ps1 -Version 0.1.1
+./build/Build.ps1 -Version 0.1.2
 ```
 
 This generates the original application icon, runs the dependency-free STA test
@@ -23,12 +23,12 @@ For actual install/upgrade/uninstall validation in a disposable authorized VM:
 
 ```powershell
 ./build/Get-PreviousInstaller.ps1
-./build/Build.ps1 -Version 0.1.1
+./build/Build.ps1 -Version 0.1.2
 $env:LUMENSNAP_AUTHORIZED_TEST_VM = '1'
 ./build/Test-Installer.ps1
 ```
 
-The previous fixture is the published 0.1.0 installer at source 218e4ee6. Its SHA-256 is pinned and checked before installing it; this exercises upgrade compatibility with the actual previous release. The script installs/runs only in the explicitly selected
+The previous fixture is the published 0.1.1 installer at source 3ffac60e. Its SHA-256 is pinned and checked before installing it; this exercises upgrade compatibility with the actual previous release. The script installs/runs only in the explicitly selected
 disposable environment. Evidence goes to artifacts/installer-evidence. Self-tests
 produce JSON and actual WPF PNGs; they are not substituted for human input tests.
 The fixture diagnostics do not read personal screenshots or installed Lightshot.

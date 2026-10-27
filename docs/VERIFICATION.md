@@ -1,5 +1,18 @@
 # Verification status
 
+## 0.1.2 UI revision
+
+The workflow upgrades the checksum-pinned published 0.1.1 installer to 0.1.2.
+Additional gates exercise internal full-screen panels with unscaled, UI-free
+export; all ten color presets changing the real editable document; removal of
+HEX fields; compact property bounds; and native hover/press animations. Motion
+is enabled explicitly in diagnostics to exercise storyboards even on a runner
+with OS animations disabled. Normal launch honors Windows animation preference.
+Gradient glow is checked for exterior clipping and spatial color variation.
+Read exact-source logs/JSON for observed results; full Windows 11 manual
+acceptance remains NOT RUN.
+
+
 ## 0.1.1 UI revision
 
 The workflow now verifies upgrade from the checksum-pinned published 0.1.0

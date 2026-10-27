@@ -19,7 +19,7 @@ The product specification outranks speculative mockups or old chat summaries.
 
 1. Preserve core Lightshot workflow: quick configurable capture hotkey, region selection, annotation, Ctrl+C copy/close, Ctrl+S Save As, printing, undo/redo and tray.
 2. Make text genuinely comfortable: editable font/size/color/weight/alignment and re-editable text directly on selected pixels. Strong Pencil, Arrow and Text tools; attractive restrained glow on exported arrows.
-3. Make the actual overlay **compact**: a narrow vertical right toolbar and a short horizontal lower toolbar, each outside selected pixels. Their **bottom edges align**; horizontal panel finishes immediately to the left of the right panel, with minimal gap. All lower buttons are grouped; Copy/Save are modestly larger/stronger, not giant cards.
+3. Make the actual overlay **compact**: a narrow vertical right toolbar and a short horizontal lower toolbar. Their **bottom edges align**; horizontal panel finishes immediately to the left of the right panel, with minimal gap. Ordinary regions keep panels outside. User revision 2026-10-27: full-screen/full-monitor selection places panels inside without shrinking the view; export excludes all UI. All lower buttons are grouped; Copy/Save are modestly larger/stronger, not giant cards. Ten named colors replace HEX entry throughout compact menus.
 4. No cloud/upload/share/search/OCR/video/AI/telemetry or unused placeholder buttons in the first release. No network needed for normal use.
 5. Produce an actual installable offline Windows Setup.exe, verify install/start/uninstall/upgrade, and publish clear exact-SHA evidence. Source-only success is not the goal.
 

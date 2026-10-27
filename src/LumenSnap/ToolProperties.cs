@@ -1,73 +1,51 @@
 namespace LumenSnap;
 
-// Contextual controls share the same mutation path as the in-place editor and undo history.
 internal sealed class ToolProperties : Border
 {
     internal ToolProperties(Annotation active, Tool tool, Action<Func<Annotation, Annotation>> change, Action done, Action? edit)
     {
-        Background = Theme.Panel; BorderBrush = Theme.Muted; BorderThickness = new Thickness(1);
-        CornerRadius = new CornerRadius(10); Padding = new Thickness(12); Width = 296;
-        var body = new StackPanel();
+        Background = Theme.Panel; BorderBrush = Rendering.Brush("#405772"); BorderThickness = new Thickness(1);
+        CornerRadius = new CornerRadius(10); Padding = new Thickness(8); Width = 240;
+        var layout = new DockPanel(); Child = layout;
+        var title = new DockPanel { Margin = new Thickness(0, 0, 0, 5) };
+        var close = Theme.Button("", "Закрыть параметры · Esc", done, 24); close.Height = 20; close.Margin = new Thickness(0); close.Padding = new Thickness(2); close.Content = Theme.Icon("Close", 11); DockPanel.SetDock(close, Dock.Right); title.Children.Add(close);
         var names = new[] { "Карандаш / маркер", "Стрелка", "Текст", "Линия", "Прямоугольник", "Эллипс" };
-        body.Children.Add(new TextBlock { Text = names[(int)tool], Foreground = Theme.Foreground, FontSize = 16, FontWeight = FontWeights.SemiBold, Margin = new Thickness(2, 0, 0, 3) });
-        body.Children.Add(Theme.Caption("Параметры выбранного инструмента"));
-        var colors = new WrapPanel { Margin = new Thickness(-2, 0, 0, 7) };
-        var hex = new TextBox { Text = active.Color, MaxLength = 7, ToolTip = "Цвет в формате #RRGGBB" };
-        var swatches = new Dictionary<string, Button>();
-        void MarkColor(string value) { foreach (var (color, b) in swatches) b.BorderBrush = string.Equals(color, value, StringComparison.OrdinalIgnoreCase) ? Theme.Foreground : Brushes.Transparent; }
-        foreach (string color in new[] { "#65B7FF", "#FF635C", "#FFD166", "#63D7A1", "#FFFFFF", "#141F2E", active.Color }.Distinct(StringComparer.OrdinalIgnoreCase))
-        {
-            var b = Theme.Button("", color, () => { active = active with { Color = color }; hex.Text = color; MarkColor(color); change(a => a with { Color = color }); }, 28);
-            b.Height = 28; b.Padding = new Thickness(5); b.Content = new System.Windows.Shapes.Ellipse { Width = 14, Height = 14, Fill = Rendering.Brush(color), Stroke = Theme.Muted, StrokeThickness = .5 };
-            swatches.Add(color, b); colors.Children.Add(b);
-        }
-        MarkColor(active.Color);
-        hex.LostKeyboardFocus += (_, _) =>
-        {
-            if (Settings.ValidColor(hex.Text)) { active = active with { Color = hex.Text.ToUpperInvariant() }; MarkColor(active.Color); change(a => a with { Color = active.Color }); }
-            else hex.Text = active.Color;
-        };
-        body.Children.Add(Theme.Section("Цвет", colors, Theme.Field("HEX · #RRGGBB", hex)));
-        UIElement Range(string label, double value, double min, double max, double step, Action<double> apply)
-        {
-            var panel = new Grid(); panel.ColumnDefinitions.Add(new ColumnDefinition()); panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(54) });
-            var slider = new Slider { Minimum = min, Maximum = max, Value = value, TickFrequency = step, IsSnapToTickEnabled = true, Margin = new Thickness(0, 0, 10, 0) };
-            var number = new TextBox { Text = value.ToString("0.##"), ToolTip = $"{min}–{max}", VerticalContentAlignment = VerticalAlignment.Center };
-            Grid.SetColumn(number, 1); panel.Children.Add(slider); panel.Children.Add(number);
-            slider.ValueChanged += (_, _) => number.Text = slider.Value.ToString("0.##");
-            void Commit() => apply(slider.Value);
-            slider.PreviewMouseLeftButtonUp += (_, _) => Commit(); slider.KeyUp += (_, _) => Commit();
-            number.LostKeyboardFocus += (_, _) => { if (double.TryParse(number.Text, out double n) && double.IsFinite(n) && n >= min && n <= max) { slider.Value = n; Commit(); } else number.Text = slider.Value.ToString("0.##"); };
-            return Theme.Field(label, panel);
-        }
-        var opacity = Range("Непрозрачность · %", active.Opacity * 100, 10, 100, 10, n => change(a => a with { Opacity = n / 100 }));
+        title.Children.Add(new TextBlock { Text = names[(int)tool], FontSize = 13, FontWeight = FontWeights.SemiBold, Foreground = Theme.Foreground, VerticalAlignment = VerticalAlignment.Center });
+        DockPanel.SetDock(title, Dock.Top); layout.Children.Add(title);
+        if (edit != null) { var button = Theme.Button("Изменить текст", "Редактировать выбранный текст", edit, 214); button.Height = 24; button.Margin = new Thickness(0, 4, 0, 0); DockPanel.SetDock(button, Dock.Bottom); layout.Children.Add(button); }
+        var body = new StackPanel(); layout.Children.Add(new ScrollViewer { Content = body, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
+        body.Children.Add(new ColorPalette(active.Color, value => change(a => a with { Color = value })) { HorizontalAlignment = HorizontalAlignment.Center });
+        body.Children.Add(new Border { Height = 1, Background = Rendering.Brush("#2C4056"), Margin = new Thickness(0, 5, 0, 5) });
         if (tool == Tool.Text)
         {
-            var fonts = new ComboBox { ItemsSource = Theme.FontNames, Text = active.Font, IsEditable = true };
+            var fonts = new ComboBox { ItemsSource = Theme.FontNames, Text = active.Font, IsEditable = true, ToolTip = "Шрифт текста", Margin = new Thickness(0, 0, 0, 5) };
             fonts.LostKeyboardFocus += (_, _) => { if (Settings.ValidFont(fonts.Text)) { active = active with { Font = fonts.Text }; change(a => a with { Font = active.Font }); } else fonts.Text = active.Font; };
-            var size = Range("Размер · px", active.FontSize, 8, 200, 1, n => change(a => a with { FontSize = n }));
-            var bold = new CheckBox { Content = "Полужирный", IsChecked = active.Bold }; bold.Click += (_, _) => change(a => a with { Bold = bold.IsChecked == true });
-            var alignments = new[] { TextAlignment.Left, TextAlignment.Center, TextAlignment.Right };
-            var align = new ComboBox { ItemsSource = new[] { "По левому краю", "По центру", "По правому краю" }, SelectedIndex = Array.IndexOf(alignments, active.Alignment) };
-            align.SelectionChanged += (_, _) => { if (align.SelectedIndex >= 0) change(a => a with { Alignment = alignments[align.SelectedIndex] }); };
-            body.Children.Add(Theme.Section("Типографика", Theme.Field("Шрифт", fonts), size, bold, Theme.Field("Выравнивание", align)));
-            var background = new CheckBox { Content = "Подложка текста", IsChecked = active.Background }; background.Click += (_, _) => change(a => a with { Background = background.IsChecked == true });
-            var outline = new CheckBox { Content = "Обводка текста", IsChecked = active.Outline }; outline.Click += (_, _) => change(a => a with { Outline = outline.IsChecked == true });
-            body.Children.Add(Theme.Section("Оформление", background, outline, opacity));
-        }
-        else
-        {
-            var line = new List<UIElement> { Range("Толщина · px", active.Width, 1, 40, 1, n => change(a => a with { Width = n })), opacity };
-            if (tool == Tool.Arrow)
+            body.Children.Add(fonts);
+            body.Children.Add(Theme.Range("Размер, px", active.FontSize, 8, 200, 1, n => change(a => a with { FontSize = n })));
+            var format = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 3, 0, 2), HorizontalAlignment = HorizontalAlignment.Center };
+            var bold = Theme.Button("Ж", "Полужирный", () => { }, 32); bold.Height = 24; bold.FontWeight = FontWeights.Bold; bold.Tag = active.Bold ? "selected" : "neutral";
+            bool isBold = active.Bold; bold.Click += (_, _) => { isBold = !isBold; bold.Tag = isBold ? "selected" : "neutral"; change(a => a with { Bold = isBold }); }; format.Children.Add(bold);
+            var buttons = new List<(TextAlignment Alignment, Button Button)>();
+            foreach (var (alignment, label) in new[] { (TextAlignment.Left, "Слева"), (TextAlignment.Center, "По центру"), (TextAlignment.Right, "Справа") })
             {
-                var glow = new CheckBox { Content = "Мягкое свечение стрелки", IsChecked = active.Glow }; glow.Click += (_, _) => change(a => a with { Glow = glow.IsChecked == true }); line.Add(glow);
+                var button = Theme.Button("", label, () => { foreach (var item in buttons) item.Button.Tag = item.Alignment == alignment ? "selected" : "neutral"; change(a => a with { Alignment = alignment }); }, 44);
+                button.Height = 24; button.Content = AlignmentIcon(alignment); button.Tag = active.Alignment == alignment ? "selected" : "neutral"; buttons.Add((alignment, button)); format.Children.Add(button);
             }
-            body.Children.Add(Theme.Section("Линия", line.ToArray()));
+            body.Children.Add(format);
+            var options = new StackPanel { Orientation = Orientation.Horizontal };
+            var background = new CheckBox { Content = "Подложка", IsChecked = active.Background, Margin = new Thickness(0, 3, 10, 3) }; background.Click += (_, _) => change(a => a with { Background = background.IsChecked == true }); options.Children.Add(background);
+            var outline = new CheckBox { Content = "Обводка", IsChecked = active.Outline }; outline.Click += (_, _) => change(a => a with { Outline = outline.IsChecked == true }); options.Children.Add(outline); body.Children.Add(options);
         }
-        var footer = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
-        if (edit != null) footer.Children.Add(Theme.Button("Изменить текст", "Редактировать выбранный текст", edit, 132));
-        footer.Children.Add(Theme.Button("Готово", "Закрыть параметры", done, 82));
-        var layout = new DockPanel(); DockPanel.SetDock(footer, Dock.Bottom); layout.Children.Add(footer);
-        layout.Children.Add(new ScrollViewer { Content = body, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }); Child = layout;
+        else body.Children.Add(Theme.Range("Линия, px", active.Width, 1, 40, 1, n => change(a => a with { Width = n })));
+        body.Children.Add(Theme.Range("Непрозр., %", active.Opacity * 100, 10, 100, 10, n => change(a => a with { Opacity = n / 100 })));
+        if (tool == Tool.Arrow)
+        {
+            var glow = new CheckBox { Content = "Свечение стрелки", IsChecked = active.Glow }; glow.Click += (_, _) => change(a => a with { Glow = glow.IsChecked == true }); body.Children.Add(glow);
+        }
+    }
+    private static UIElement AlignmentIcon(TextAlignment alignment)
+    {
+        string middle = alignment == TextAlignment.Left ? "M2,6 L10,6 M2,14 L10,14" : alignment == TextAlignment.Right ? "M6,6 L14,6 M6,14 L14,14" : "M4,6 L12,6 M4,14 L12,14";
+        return new System.Windows.Shapes.Path { Data = Geometry.Parse("M2,2 L14,2 M2,10 L14,10 " + middle), Width = 14, Height = 14, Stroke = Theme.Foreground, StrokeThickness = 1.2, Stretch = Stretch.Uniform };
     }
 }

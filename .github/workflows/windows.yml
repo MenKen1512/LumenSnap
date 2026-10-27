@@ -26,12 +26,12 @@ jobs:
           New-Item -ItemType Directory -Force artifacts | Out-Null
           Get-CimInstance Win32_OperatingSystem | Select-Object Caption, Version | Out-File artifacts/environment.txt
           dotnet --info | Out-File artifacts/environment.txt -Append
-      - name: Fetch checksum-pinned published 0.1.0 installer
+      - name: Fetch checksum-pinned published 0.1.1 installer
         shell: pwsh
         run: ./build/Get-PreviousInstaller.ps1
       - name: Unit tests and self-contained Windows installer
         shell: pwsh
-        run: ./build/Build.ps1 -Version 0.1.1
+        run: ./build/Build.ps1 -Version 0.1.2
       - name: Install, start, upgrade, uninstall, reinstall on disposable runner
         shell: pwsh
         run: ./build/Test-Installer.ps1
@@ -47,7 +47,7 @@ jobs:
         with:
           name: LumenSnap-windows-${{ github.sha }}
           path: |
-            artifacts/dist/*0.1.1*
+            artifacts/dist/*0.1.2*
             artifacts/unit-tests.txt
             artifacts/environment.txt
             artifacts/installer-evidence/

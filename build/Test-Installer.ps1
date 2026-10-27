@@ -1,4 +1,4 @@
-param([string]$Version = '0.1.1', [string]$PreviousVersion = '0.1.0')
+param([string]$Version = '0.1.2', [string]$PreviousVersion = '0.1.1')
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 if (-not $env:GITHUB_ACTIONS -and $env:LUMENSNAP_AUTHORIZED_TEST_VM -ne '1') { throw 'Run only in GitHub Actions or an explicitly authorized disposable Windows VM' }

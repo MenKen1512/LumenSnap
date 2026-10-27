@@ -61,7 +61,7 @@ No dedicated Search, Upload, Share, OCR or AI tools in the main panel.
 - Pencil/Marker: smooth antialiased freehand path, adjustable stroke width and color; optional opacity within the same tool rather than another permanent toolbar button.
 - Arrow: ready-to-use clearly visible arrow with proportionate head, configurable thickness/color and subtle optional glow that is **part of the exported annotation**. Default must be visible on both light and dark backgrounds without excessive neon/bloom.
 - Line/rectangle/ellipse: drag to place, adjust dimensions and line width/color, consistent antialiasing.
-- Colors: compact preset palette, recent/custom colors and explicit HEX input, with a clear visual current selection. Eyedropper may be deferred if implementation threatens the initial schedule.
+- Colors (user revision 2026-10-27): ten named basic presets with a clear selected state, shared between tool properties and general settings. No HEX entry in menus. Preserve valid legacy custom colors in stored settings until the user chooses a preset. Eyedropper remains deferred.
 - Retain per-tool last-used settings within a capture and across sessions where feasible. Provide sensible initial defaults.
 
 ### EDIT-03 — Object-based editing (P0)
@@ -87,7 +87,7 @@ No dedicated Search, Upload, Share, OCR or AI tools in the main panel.
 ## 4. Lower action toolbar
 
 ### ACT-01 — Fixed contents (P0)
-Left-to-right in **one compact contiguous horizontal surface**: Undo, Redo, Print, More (ellipsis), then Copy and Save. All buttons are physically grouped near the lower-right of the selection; no empty flex gap splitting left and right sides. The ellipsis can be omitted until a real secondary action exists; **no empty or duplicate menu**.
+Left-to-right in **one compact contiguous horizontal surface**: Undo, Redo, Print, More (ellipsis), then Copy, Save and Close. Close cancels the current capture and leaves the tray running. All buttons are physically grouped near the lower-right of the selection; no empty flex gap splitting left and right sides. The ellipsis can be omitted until a real secondary action exists; **no empty or duplicate menu**.
 
 ### ACT-02 — Copy (P0)
 - Copy is a high-priority, modestly wider and visually stronger button than normal icon buttons. Tooltip/label explains "Копировать" and Ctrl+C.

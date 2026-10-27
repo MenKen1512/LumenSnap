@@ -27,10 +27,12 @@ monitor DPI. Negative virtual origins are translated once at the capture boundar
 Display topology changes cancel stale capture. Real mixed-DPI acceptance remains
 required; arithmetic tests alone do not prove it.
 
-When selection consumes the available display, a workspace scales only the editing
-view and reserves exterior margins for aligned panels. Scene coordinates stay in
-physical pixels; WPF inverse transforms map input back to the unchanged document.
-Export never uses the scaled scene. On viewports physically smaller than the
+When selection covers a full monitor or virtual desktop, panels dock inside the
+selected monitor without a scene transform. Other regions may reserve exterior
+workspace by scaling only the editing view if exterior panels cannot fit. Scene
+coordinates stay in physical pixels; WPF inverse transforms map input back to the
+unchanged document. Export never uses the scene or any control tree, so even
+internal full-screen panels cannot appear in saved pixels. On viewports smaller than the
 panels themselves, keyboard operations remain available; those viewports require
 separate accessibility/design work. Real mixed-DPI and pointer acceptance remains
 required before stable release.

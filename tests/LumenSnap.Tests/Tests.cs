@@ -28,19 +28,31 @@ internal static class Tests
         foreach (double dpi in new[] { 96d, 120, 144, 192 }) Test("DPI round trip " + dpi, () => { var p = new Point(-1920, 371); Assert((Coordinates.Pixels(Coordinates.Dips(p, dpi), dpi) - p).Length < .00001); });
         Test("aligned compact outside panels", () => { var s = new Rect(100, 100, 650, 400); var p = PanelLayout.Place(s, new(0, 0, 1280, 900)); Assert(p.Visible); Assert(p.Vertical.Bottom == p.Horizontal.Bottom); Assert(p.Vertical.Left - p.Horizontal.Right == 6); Assert(!p.Vertical.IntersectsWith(s) && !p.Horizontal.IntersectsWith(s)); });
         Test("panel edge fallback is visible and outside", () => { var s = new Rect(600, 400, 650, 400); var p = PanelLayout.Place(s, new(0, 0, 1280, 900)); Assert(p.Visible); Assert(!p.Vertical.IntersectsWith(s) && !p.Horizontal.IntersectsWith(s)); });
-        Test("full-desktop impossible geometry is explicit", () => Assert(!PanelLayout.Place(new(0, 0, 1280, 900), new(0, 0, 1280, 900)).Visible));
+        Test("exterior-only placement has no space on a full desktop", () => Assert(!PanelLayout.Place(new(0, 0, 1280, 900), new(0, 0, 1280, 900)).Visible));
         Test("small selections at all corners retain aligned controls", () =>
         {
             var monitor = new Rect(0, 0, 1280, 900);
             foreach (var s in new[] { new Rect(0, 0, 30, 30), new Rect(1250, 0, 30, 30), new Rect(0, 870, 30, 30), new Rect(1250, 870, 30, 30) })
             { var view = PanelLayout.WorkspaceFor(s, monitor, monitor, 1); Assert(view.Panels.Visible); Assert(view.Panels.Vertical.Bottom == view.Panels.Horizontal.Bottom); }
         });
-        Test("full-screen editing workspace keeps pixels and panels separate", () =>
+        Test("full-screen panels move inside without scaling capture", () =>
         {
-            var image = new Rect(0, 0, 1280, 900); var view = PanelLayout.WorkspaceFor(image, image, image, 1);
-            Assert(view.Zoom < 1 && view.Panels.Visible); Assert(!view.Display(image).IntersectsWith(view.Panels.Vertical));
-            Assert(!view.Display(image).IntersectsWith(view.Panels.Horizontal)); Assert(view.Panels.Vertical.Bottom == view.Panels.Horizontal.Bottom);
-            Assert(image.Width == 1280 && image.Height == 900);
+            foreach (double scale in new[] { 1d, 1.25, 1.5, 2 })
+            {
+                var image = new Rect(-1920, -200, 3840, 1280); var monitor = new Rect(-1920, -200, 1920, 1080);
+                var view = PanelLayout.WorkspaceFor(image, image, monitor, scale);
+                Assert(view.Zoom == 1 && view.Offset == new Vector() && view.Panels.Visible && view.Panels.Inside);
+                Assert(monitor.Contains(view.Panels.Vertical) && monitor.Contains(view.Panels.Horizontal));
+                Assert(!view.Panels.Vertical.IntersectsWith(view.Panels.Horizontal));
+                Assert(Math.Abs(view.Panels.Vertical.Bottom - view.Panels.Horizontal.Bottom) < .01);
+            }
+        });
+        Test("monitor coverage tolerates one capture pixel but not partial selection", () =>
+        {
+            var monitor = new Rect(0, 0, 1280, 900);
+            Assert(PanelLayout.WorkspaceFor(new Rect(1, 1, 1278, 898), monitor, monitor, 1).Panels.Inside);
+            Assert(!PanelLayout.WorkspaceFor(new Rect(20, 20, 1200, 800), monitor, monitor, 1).Panels.Inside);
+            Assert(!PanelLayout.Inside(new Rect(2000, 2000, 30, 30), monitor).Visible);
         });
         Test("panels never silently overlap for randomized selections", () =>
         {
@@ -85,12 +97,13 @@ internal static class Tests
             foreach (double scale in new[] { 1d, 1.25, 1.5, 2 })
             {
                 var visual = new DrawingVisual(); using (var dc = visual.RenderOpen())
-                { dc.DrawRectangle(Brushes.Black, null, new Rect(0, 0, 100, 100)); new SelectionChrome().Draw(dc, new Rect(20, 20, 60, 60), scale); }
-                var bitmap = new RenderTargetBitmap(100, 100, 96, 96, PixelFormats.Pbgra32); bitmap.Render(visual);
-                var pixels = new byte[40000]; bitmap.CopyPixels(pixels, 400, 0);
-                Assert(pixels[50 * 400 + 17 * 4] > pixels[50 * 400 + 17 * 4 + 2], "External blue glow missing");
-                Assert(pixels[50 * 400 + 24 * 4] == 0 && pixels[50 * 400 + 24 * 4 + 1] == 0, "Glow contaminated selection interior");
-                Assert(pixels[50 * 400 + 2 * 4] == 0, "Glow exceeds bounded extent");
+                { dc.DrawRectangle(Brushes.Black, null, new Rect(0, 0, 200, 200)); new SelectionChrome().Draw(dc, new Rect(60, 60, 80, 80), scale); }
+                var bitmap = new RenderTargetBitmap(200, 200, 96, 96, PixelFormats.Pbgra32); bitmap.Render(visual);
+                var pixels = new byte[160000]; bitmap.CopyPixels(pixels, 800, 0);
+                Assert(pixels[100 * 800 + 57 * 4] > pixels[100 * 800 + 57 * 4 + 2], "External blue glow missing");
+                Assert(pixels[100 * 800 + 64 * 4] == 0 && pixels[100 * 800 + 64 * 4 + 1] == 0, "Glow contaminated selection interior");
+                Assert(pixels[100 * 800 + 2 * 4] == 0, "Glow exceeds bounded extent");
+                Assert(pixels[57 * 800 + 65 * 4 + 1] > pixels[142 * 800 + 135 * 4 + 1], "Gradient must transition from cyan to violet");
             }
         });
         Test("failed save preserves original file", () => WithTemp(dir =>

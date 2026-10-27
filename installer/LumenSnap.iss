@@ -1,8 +1,8 @@
 #ifndef AppVersion
-  #define AppVersion "0.1.1"
+  #define AppVersion "0.1.2"
 #endif
 #ifndef PublishDir
-  #define PublishDir "..\artifacts\publish-0.1.1"
+  #define PublishDir "..\artifacts\publish-0.1.2"
 #endif
 #ifndef OutputDir
   #define OutputDir "..\artifacts\dist"
