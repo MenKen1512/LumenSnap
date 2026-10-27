@@ -109,7 +109,9 @@ internal static class Smoke
                     // Render the window root: rendering its inset Content alone clips the footer
                     // and omits the actual window background from the evidence bitmap.
                     Rendering.Save(RenderElement(window), Path.Combine(output, "settings-ui.png"));
-                    var scroll = Descendants<ScrollViewer>(window).First(); scroll.ScrollToBottom(); Pump();
+                    var scroll = Descendants<ScrollViewer>(window).First();
+                    if (window.ActualHeight >= 565) Require(scroll.ScrollableHeight < 1, "All default settings fit without scrolling at normal height");
+                    scroll.ScrollToBottom(); Pump();
                     Require(scroll.ScrollableHeight == 0 || scroll.VerticalOffset > 0, "Settings content scrolls to the lower sections");
                     Rendering.Save(RenderElement(window), Path.Combine(output, "settings-bottom-ui.png"));
                 }
@@ -145,16 +147,26 @@ internal static class Smoke
             });
             Check("full-screen-panels-inside-with-original-pixel-export", () =>
             {
-                overlay.PrepareFullScreenForSmoke(); Pump();
-                var view = overlay.DisplayWorkspace;
-                Require(view.Zoom == 1 && view.Panels.Inside && view.Panels.Visible, "Full screen keeps unscaled scene and internal panels");
-                Require(overlay.Selection.Contains(view.Panels.Vertical) && overlay.Selection.Contains(view.Panels.Horizontal), "Panels are fully within the selected region");
-                Rendering.Save(overlay.RenderUi(), Path.Combine(output, "full-screen-ui.png"));
-                var exported = overlay.Export(); Require(exported.PixelWidth == 1280 && exported.PixelHeight == 900, "Full-screen export preserves original dimensions");
-                var point = view.Panels.Horizontal.BottomRight - new Vector(8, 8);
-                var pixel = new byte[4]; exported.CopyPixels(new Int32Rect((int)point.X, (int)point.Y, 1, 1), pixel, 4, 0);
-                Require(pixel[0] == 0x51 && pixel[1] == 0x3B && pixel[2] == 0x26, "Internal toolbar does not contaminate exported pixels");
-                overlay.RestoreRegionForSmoke(); Pump();
+                // Match the real monitor dimensions; a larger synthetic canvas would make
+                // correctly monitor-docked panels look detached from the screenshot corner.
+                var fullDrawing = new DrawingVisual();
+                using (var dc = fullDrawing.RenderOpen())
+                { dc.DrawRectangle(Rendering.Brush("#263B51"), null, new Rect(0, 0, native!.PixelWidth, native.PixelHeight)); dc.DrawImage(fixture, new Rect(0, 0, 1280, 900)); }
+                var fullFixture = new RenderTargetBitmap(native!.PixelWidth, native.PixelHeight, 96, 96, PixelFormats.Pbgra32); fullFixture.Render(fullDrawing); fullFixture.Freeze();
+                var full = new Overlay(fullFixture, desktop, new Settings(), _ => { });
+                try
+                {
+                    full.Show(); Pump(); full.PrepareSmokeScene(); full.PrepareFullScreenForSmoke(); Pump();
+                    var view = full.DisplayWorkspace;
+                    Require(view.Zoom == 1 && view.Panels.Inside && view.Panels.Visible, "Full screen keeps unscaled scene and internal panels");
+                    Require(full.Selection.Contains(view.Panels.Vertical) && full.Selection.Contains(view.Panels.Horizontal), "Panels are fully within the selected region");
+                    Rendering.Save(full.RenderUi(), Path.Combine(output, "full-screen-ui.png"));
+                    var exported = full.Export(); Require(exported.PixelWidth == native.PixelWidth && exported.PixelHeight == native.PixelHeight, "Full-screen export preserves original dimensions");
+                    var point = view.Panels.Horizontal.BottomRight - new Vector(8, 8);
+                    var pixel = new byte[4]; exported.CopyPixels(new Int32Rect((int)point.X, (int)point.Y, 1, 1), pixel, 4, 0);
+                    Require(pixel[0] == 0x51 && pixel[1] == 0x3B && pixel[2] == 0x26, "Internal toolbar does not contaminate exported pixels");
+                }
+                finally { full.Close(); overlay.Activate(); Pump(); }
             });
             Check("compact-toolbar-and-close-after-save-cancels-capture", () =>
             {

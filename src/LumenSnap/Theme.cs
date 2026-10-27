@@ -164,9 +164,9 @@ internal static class Theme
     internal static StackPanel Field(string label, UIElement input) { var p = new StackPanel { Margin = new Thickness(0, 0, 0, 5) }; p.Children.Add(Caption(label)); p.Children.Add(input); return p; }
     internal static Border Section(string title, params UIElement[] children)
     {
-        var p = new StackPanel(); p.Children.Add(new TextBlock { Text = title, Foreground = Foreground, FontSize = 11, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 6) });
+        var p = new StackPanel(); p.Children.Add(new TextBlock { Text = title, Foreground = Foreground, FontSize = 11, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 4) });
         foreach (var child in children) p.Children.Add(child);
-        return new Border { BorderBrush = Frozen("#2A3C50"), BorderThickness = new Thickness(0, 1, 0, 0), Padding = new Thickness(0, 9, 0, 2), Margin = new Thickness(0, 5, 0, 4), Child = p };
+        return new Border { BorderBrush = Frozen("#2A3C50"), BorderThickness = new Thickness(0, 1, 0, 0), Padding = new Thickness(0, 7, 0, 2), Margin = new Thickness(0, 3, 0, 4), Child = p };
     }
     internal static Border Surface(UIElement child) => new()
     { Background = new LinearGradientBrush((Color)ColorConverter.ConvertFromString("#1D2D40"), (Color)ColorConverter.ConvertFromString("#101A28"), 90), BorderBrush = Frozen("#3C526C"), BorderThickness = new Thickness(ToolbarMetrics.Density), CornerRadius = new CornerRadius(8), Padding = new Thickness(3 * ToolbarMetrics.Density), Child = child };
