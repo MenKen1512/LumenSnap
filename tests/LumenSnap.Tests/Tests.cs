@@ -80,6 +80,19 @@ internal static class Tests
             Rendering.Export(black, new(0, 0, 100, 100), [arrow with { Glow = false }]).CopyPixels(q, 400, 0);
             Assert(p[46 * 400 + 40 * 4] > q[46 * 400 + 40 * 4], "Glow outside shaft must be exported");
         });
+        Test("selection glow stays outside selected pixels at multiple scales", () =>
+        {
+            foreach (double scale in new[] { 1d, 1.25, 1.5, 2 })
+            {
+                var visual = new DrawingVisual(); using (var dc = visual.RenderOpen())
+                { dc.DrawRectangle(Brushes.Black, null, new Rect(0, 0, 100, 100)); new SelectionChrome().Draw(dc, new Rect(20, 20, 60, 60), scale); }
+                var bitmap = new RenderTargetBitmap(100, 100, 96, 96, PixelFormats.Pbgra32); bitmap.Render(visual);
+                var pixels = new byte[40000]; bitmap.CopyPixels(pixels, 400, 0);
+                Assert(pixels[50 * 400 + 17 * 4] > pixels[50 * 400 + 17 * 4 + 2], "External blue glow missing");
+                Assert(pixels[50 * 400 + 24 * 4] == 0 && pixels[50 * 400 + 24 * 4 + 1] == 0, "Glow contaminated selection interior");
+                Assert(pixels[50 * 400 + 2 * 4] == 0, "Glow exceeds bounded extent");
+            }
+        });
         Test("failed save preserves original file", () => WithTemp(dir =>
         {
             string file = Path.Combine(dir, "original.png"); File.WriteAllText(file, "keep");

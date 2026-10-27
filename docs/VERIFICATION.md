@@ -1,5 +1,20 @@
 # Verification status
 
+## 0.1.1 UI revision
+
+The workflow now verifies upgrade from the checksum-pinned published 0.1.0
+installer (source `218e4ee603eb63ef70035b94fbe1208fc4d8e253`). The new smoke
+scenarios exercise active-tool hover and held mouse press through native Windows
+input, keyboard focus, the actual text-properties popup/font dropdown, settings
+scrolling/rendering, and Close immediately after Save. UI PNGs are rendered from
+the real WPF controls with a synthetic screenshot background. The component
+suite also checks external-only selection glow at 100/125/150/200% scale.
+These checks are release gates; read the attached exact-source JSON/logs for
+their observed results. Physical mixed-DPI input and full Windows 11 acceptance
+remain NOT RUN. No comparison with Lightshot performance is claimed.
+
+## Historical baseline
+
 Implementation is a preview. Actual Windows CI availability was verified by run
 [40389443223](https://github.com/MenKen1512/LumenSnap/actions/runs/40389443223).
 The first full installer lifecycle passed in run

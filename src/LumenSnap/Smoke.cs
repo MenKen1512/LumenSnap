@@ -71,7 +71,60 @@ internal static class Smoke
                 Require(escape.Handled && overlay.IsVisible && Keyboard.FocusedElement is not TextBox, "First Escape leaves text editing only");
                 Require(overlay.Document.Items.Length == 3, "Re-editing commits one existing object");
             });
-            overlay.Close(); overlay = null; Pump();
+            Check("contextual-text-properties-render", () =>
+            {
+                var content = overlay.OpenPropertiesForSmoke(); Pump();
+                Rendering.Save(RenderElement(content), Path.Combine(output, "text-properties-ui.png"));
+                var fonts = Descendants<ComboBox>(content).First(x => x.IsEditable);
+                Require(fonts.Text == "Segoe UI", "Editable font selector retains selected value");
+                fonts.IsDropDownOpen = true; Pump(); Require(fonts.IsDropDownOpen && fonts.Items.Count > 0, "Native themed font dropdown opens");
+                fonts.IsDropDownOpen = false; overlay.ClosePropertiesForSmoke(); Pump();
+            });
+            Check("settings-window-structure-and-render", () =>
+            {
+                var window = new SettingsWindow(new Settings(), _ => throw new InvalidOperationException("Smoke must not change settings"));
+                try
+                {
+                    window.Show(); Pump();
+                    Require(Descendants<Button>(window).Any(x => Equals(x.Content, "Сохранить") && x.IsVisible), "Save remains accessible");
+                    Rendering.Save(RenderElement((FrameworkElement)window.Content), Path.Combine(output, "settings-ui.png"));
+                    var scroll = Descendants<ScrollViewer>(window).First(); scroll.ScrollToBottom(); Pump();
+                    Rendering.Save(RenderElement((FrameworkElement)window.Content), Path.Combine(output, "settings-bottom-ui.png"));
+                }
+                finally { window.Close(); overlay.Activate(); Pump(); }
+            });
+            Check("native-active-button-hover-press-and-keyboard-focus", () =>
+            {
+                var button = overlay.ActiveButton; button.ApplyTemplate();
+                var chrome = (Border)button.Template.FindName("Chrome", button);
+                Native.GetCursorPos(out var previous);
+                try
+                {
+                    Native.SetCursorPos(15, 80); PumpInput();
+                    string rest = chrome.Background.ToString();
+                    var center = button.PointToScreen(new Point(button.ActualWidth / 2, button.ActualHeight / 2));
+                    Require(Native.SetCursorPos((int)center.X, (int)center.Y), "Move runner pointer to active tool"); PumpInput();
+                    Require(button.IsMouseOver && chrome.Background.ToString() != rest, "Selected tool shows real hover feedback");
+                    string hover = chrome.Background.ToString(); Rendering.Save(overlay.RenderUi(), Path.Combine(output, "button-hover-ui.png"));
+                    Native.mouse_event(2, 0, 0, 0, UIntPtr.Zero); PumpInput();
+                    Require(button.IsPressed && chrome.Background.ToString() != hover, "Real mouse-down changes button chrome");
+                    Rendering.Save(overlay.RenderUi(), Path.Combine(output, "button-pressed-ui.png"));
+                    // Release outside to avoid opening the properties popup while testing the button state.
+                    Native.SetCursorPos(15, 80); Native.mouse_event(4, 0, 0, 0, UIntPtr.Zero); PumpInput();
+                    button.Focus(); Pump(); Require(button.IsKeyboardFocused, "Toolbar supports keyboard focus");
+                }
+                finally { Native.mouse_event(4, 0, 0, 0, UIntPtr.Zero); Native.SetCursorPos(previous.X, previous.Y); }
+            });
+            Check("compact-toolbar-and-close-after-save-cancels-capture", () =>
+            {
+                var button = overlay.CloseButton; var row = (StackPanel)button.Parent;
+                Require(Equals(((Button)row.Children[^2]).Content, "Сохранить") && Equals(button.Content, "Закрыть"), "Close immediately follows Save");
+                Require(Math.Abs(button.ActualHeight - 40 * 2d / 3) < .01, "Toolbar buttons are 1.5 times smaller");
+                bool completed = false; overlay.Completed += _ => completed = true;
+                button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
+                Require(!overlay.IsVisible && !completed, "Close cancels capture without copy/save completion");
+            });
+            overlay = null; Pump();
             Check("real-desktop-overlay-open-close", () =>
             {
                 for (int i = 0; i < 5; i++)
@@ -96,5 +149,20 @@ internal static class Smoke
         return code;
     }
     internal static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
+    private static IEnumerable<T> Descendants<T>(DependencyObject parent) where T : DependencyObject
+    {
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        { var child = VisualTreeHelper.GetChild(parent, i); if (child is T match) yield return match; foreach (var nested in Descendants<T>(child)) yield return nested; }
+    }
+    private static BitmapSource RenderElement(FrameworkElement element)
+    {
+        element.UpdateLayout(); var bitmap = new RenderTargetBitmap((int)Math.Ceiling(element.ActualWidth), (int)Math.Ceiling(element.ActualHeight), 96, 96, PixelFormats.Pbgra32);
+        bitmap.Render(element); bitmap.Freeze(); return bitmap;
+    }
+    private static void PumpInput()
+    {
+        var frame = new DispatcherFrame(); var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(80) };
+        timer.Tick += (_, _) => { timer.Stop(); frame.Continue = false; }; timer.Start(); Dispatcher.PushFrame(frame);
+    }
     private static void Pump() { var frame = new DispatcherFrame(); Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Background, () => frame.Continue = false); Dispatcher.PushFrame(frame); }
 }

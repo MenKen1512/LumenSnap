@@ -26,6 +26,18 @@ External gap may be around 6-10 device-independent pixels; the gap between separ
 
 ## 2. Size and density
 
+**User-approved revision, 2026-10-27 (supersedes the initial ranges below):**
+reduce the shipped 0.1.0 toolbars by a factor of 1.5. Surface thickness is
+34.67 DIP (previously 52), tool hit area 26.67 DIP (previously 40), vertical
+height 210.67 DIP (previously 316), icons 16 DIP. Copy/Save width is 78.67 DIP.
+Add a compact visible «Закрыть» action immediately after Save; the resulting
+horizontal surface is 306.67 DIP wide. Maintain existing exterior placement,
+aligned bottoms and 6 DIP inter-panel gap. Sizes scale with monitor DPI.
+Vector icons and template-level hover/press/focus must also work on the active
+tool. Selection glow is clipped to the exterior and excluded from exports.
+Tool properties use contextual sections; general settings use labeled cards,
+scrollable content and a fixed Save/Cancel footer.
+
 The product should feel slightly more comfortable than the old Lightshot UI, but not as oversized as the first generated mockup.
 
 **Initial target range at 100% scaling (tune after actual Windows rendering):**
@@ -61,7 +73,7 @@ Pencil/Arrow/Text hover can produce a small soft glow and a short tooltip; do no
 
 ## 4. Horizontal toolbar
 
-One compact horizontal surface, in this order: Undo, Redo, Print, More (only if it has a real purpose), Copy, Save.
+One compact horizontal surface, in this order: Undo, Redo, Print, More (only if it has a real purpose), Copy, Save, Close. Close cancels the current capture (same result as Esc outside text/properties) and leaves the tray application running.
 
 - All controls clustered together. Compact neutral icon-only buttons on the left; slightly more prominent Copy/Save on the right, within the **same background panel**.
 - Copy and Save are roughly the same visual priority to each other: a contrasting blue-tinted field, clear icon and legible action label; shortcuts Ctrl+C and Ctrl+S can be shown in microcopy only if the density remains balanced, otherwise use tooltips.

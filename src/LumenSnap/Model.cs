@@ -78,6 +78,13 @@ public static class Coordinates
 }
 
 public readonly record struct PanelPlacement(Rect Vertical, Rect Horizontal, bool Visible);
+public static class ToolbarMetrics
+{
+    public const double Density = 2d / 3;
+    public const double VerticalWidth = 52 * Density, VerticalHeight = 316 * Density;
+    // Preserve the original action group at 2/3 size, then add a compact Close action.
+    public const double HorizontalWidth = (386 + 74) * Density, HorizontalHeight = 52 * Density;
+}
 public readonly record struct Workspace(double Zoom, Vector Offset, PanelPlacement Panels)
 {
     public Rect Display(Rect source) => new(source.X * Zoom + Offset.X, source.Y * Zoom + Offset.Y, source.Width * Zoom, source.Height * Zoom);
@@ -91,15 +98,15 @@ public static class PanelLayout
         // Show the whole frozen desktop with exterior workspace when selected pixels fill a display.
         // Only the editing view is scaled; the document and export always retain physical pixels.
         double margin = 16 * scale;
-        double zoom = Math.Min(1, Math.Min((monitor.Width - 52 * scale - 3 * margin) / image.Width,
-            (monitor.Height - 52 * scale - 3 * margin) / image.Height));
+        double zoom = Math.Min(1, Math.Min((monitor.Width - ToolbarMetrics.VerticalWidth * scale - 3 * margin) / image.Width,
+            (monitor.Height - ToolbarMetrics.HorizontalHeight * scale - 3 * margin) / image.Height));
         zoom = Math.Max(.05, zoom);
         var view = new Workspace(zoom, new Vector(monitor.X + margin, monitor.Y + margin), default);
         return view with { Panels = Place(view.Display(selection), monitor, scale) };
     }
     public static PanelPlacement Place(Rect s, Rect monitor, double scale = 1)
     {
-        double vw = 52 * scale, vh = 316 * scale, hw = 386 * scale, hh = 52 * scale;
+        double vw = ToolbarMetrics.VerticalWidth * scale, vh = ToolbarMetrics.VerticalHeight * scale, hw = ToolbarMetrics.HorizontalWidth * scale, hh = ToolbarMetrics.HorizontalHeight * scale;
         double gap = 8 * scale, between = 6 * scale;
         // Try right/below, left/below, right/above and left/above. Panels never cover selected pixels.
         foreach (bool left in new[] { false, true })

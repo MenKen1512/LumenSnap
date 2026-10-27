@@ -1,10 +1,11 @@
-param([string]$Version = '0.1.0', [string]$PreviousVersion = '0.0.9')
+param([string]$Version = '0.1.1', [string]$PreviousVersion = '0.1.0')
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 if (-not $env:GITHUB_ACTIONS -and $env:LUMENSNAP_AUTHORIZED_TEST_VM -ne '1') { throw 'Run only in GitHub Actions or an explicitly authorized disposable Windows VM' }
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $out = Join-Path $repo 'artifacts/installer-evidence'
 New-Item -ItemType Directory -Force $out | Out-Null
+Copy-Item (Join-Path $repo 'artifacts/previous-installer.json') $out
 $installed = Join-Path $env:LOCALAPPDATA 'Programs/LumenSnap'
 $settingsDir = Join-Path $env:LOCALAPPDATA 'LumenSnap'
 $exe = Join-Path $installed 'LumenSnap.exe'

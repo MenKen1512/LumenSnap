@@ -8,7 +8,7 @@ LumenSnap is an independent, offline-first Windows screen-capture and annotation
 
 Default shortcut: **Ctrl+Alt+S**, configurable in tray settings. The screenshot editor includes selection move/resize, Pencil/Marker, Arrow with exported glow, editable Cyrillic text, line/rectangle/ellipse, object move/resize/delete, Undo/Redo, Copy, Save As (PNG/JPEG/BMP) and Print. Text input keeps its own clipboard and undo commands. When exterior panel space is tight, only the editing view scales; export retains original pixels.
 
-Build on an authorized Windows developer machine with .NET SDK 10 and Inno Setup 6: `./build/Build.ps1 -Version 0.1.0`. Installer lifecycle tests require a disposable authorized Windows VM; see the build guide. Release assets contain exact source SHA, toolchain metadata, checksums and raw test evidence. Runtime is bundled; normal use is offline. Builds are unsigned.
+Build on an authorized Windows developer machine with .NET SDK 10 and Inno Setup 6: `./build/Build.ps1 -Version 0.1.1`. Installer lifecycle tests require a disposable authorized Windows VM; see the build guide. Release assets contain exact source SHA, toolchain metadata, checksums and raw test evidence. Runtime is bundled; normal use is offline. Builds are unsigned.
 
 ## Product direction
 

@@ -16,7 +16,9 @@ internal sealed class Overlay : Window
     private readonly Action<Settings> settingsChanged;
     private Settings settings;
     private readonly Border vertical, horizontal;
-    private readonly Button undo, redo;
+    private readonly Button undo, redo, closeCapture;
+    private Tool? paintedTool;
+    private static readonly Brush ActiveTool = Rendering.Brush("#305B7E"), PrimaryTool = Rendering.Brush("#20364C"), SecondaryTool = Rendering.Brush("#1B2A3B");
     private readonly Dictionary<Tool, Button> tools = [];
     private readonly TextBlock status = new() { Foreground = Brushes.White, Background = Theme.Panel, Padding = new Thickness(8), TextWrapping = TextWrapping.Wrap, MaxWidth = 650 };
     private Popup? properties;
@@ -46,22 +48,22 @@ internal sealed class Overlay : Window
         scene = new Scene(this) { Width = image.PixelWidth, Height = image.PixelHeight, Focusable = true };
         canvas.Children.Add(scene);
         var v = new StackPanel();
-        var labels = new[] { "✎", "↗", "Т", "╱", "□", "○" };
         var names = new[] { "Карандаш / маркер", "Стрелка", "Текст", "Линия", "Прямоугольник", "Эллипс" };
         for (int i = 0; i < 6; i++)
         {
             var t = (Tool)i;
-            var b = Theme.Button(labels[i], names[i] + "; повторное нажатие — свойства", () => SelectTool(t));
-            b.FontSize = 22; b.FontWeight = i < 3 ? FontWeights.SemiBold : FontWeights.Normal; tools.Add(t, b); v.Children.Add(b);
+            var b = Theme.Toolbar(Theme.Icon(t.ToString()), names[i] + "; повторное нажатие — свойства", () => SelectTool(t));
+            tools.Add(t, b); v.Children.Add(b);
         }
-        var options = Theme.Button("●", "Цвет и параметры", ShowProperties); options.Foreground = Theme.Accent; v.Children.Add(options);
-        vertical = Theme.Surface(v); vertical.Width = 52; vertical.Height = 316; canvas.Children.Add(vertical);
+        var options = Theme.Toolbar(new System.Windows.Shapes.Ellipse { Width = 14, Height = 14, Fill = Rendering.Brush(defaults.Color), Stroke = Theme.Foreground, StrokeThickness = 1 }, "Цвет и параметры", ShowProperties); v.Children.Add(options);
+        vertical = Theme.Surface(v); vertical.Width = ToolbarMetrics.VerticalWidth; vertical.Height = ToolbarMetrics.VerticalHeight; canvas.Children.Add(vertical);
         var h = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-        undo = Theme.Button("↶", "Отменить · Ctrl+Z", Undo); redo = Theme.Button("↷", "Повторить · Ctrl+Y", Redo);
-        h.Children.Add(undo); h.Children.Add(redo); h.Children.Add(Theme.Button("▤", "Печать · Ctrl+P", Print));
-        foreach (var b in new[] { Theme.Button("Копировать", "Копировать · Ctrl+C", Copy, 118), Theme.Button("Сохранить", "Сохранить как… · Ctrl+S", Save, 118) })
+        undo = Theme.Toolbar(Theme.Icon("Undo"), "Отменить · Ctrl+Z", Undo); redo = Theme.Toolbar(Theme.Icon("Redo"), "Повторить · Ctrl+Y", Redo);
+        h.Children.Add(undo); h.Children.Add(redo); h.Children.Add(Theme.Toolbar(Theme.Icon("Print"), "Печать · Ctrl+P", Print));
+        foreach (var b in new[] { Theme.Toolbar("Копировать", "Копировать · Ctrl+C", Copy, 118), Theme.Toolbar("Сохранить", "Сохранить как… · Ctrl+S", Save, 118) })
         { b.Background = Rendering.Brush("#284F76"); b.BorderBrush = Theme.Accent; h.Children.Add(b); }
-        horizontal = Theme.Surface(h); horizontal.Width = 386; horizontal.Height = 52; canvas.Children.Add(horizontal);
+        closeCapture = Theme.Toolbar("Закрыть", "Закрыть захват · Esc", Close, 70); h.Children.Add(closeCapture);
+        horizontal = Theme.Surface(h); horizontal.Width = ToolbarMetrics.HorizontalWidth; horizontal.Height = ToolbarMetrics.HorizontalHeight; canvas.Children.Add(horizontal);
         canvas.Children.Add(status); Canvas.SetLeft(status, 16); Canvas.SetTop(status, 16);
         scene.MouseLeftButtonDown += MouseDownOnImage; scene.MouseMove += MouseMoveOnImage; scene.MouseLeftButtonUp += MouseUpOnImage;
         scene.MouseRightButtonDown += (_, e) => { CommitText(); properties?.SetCurrentValue(Popup.IsOpenProperty, false); selected = document.Items.LastOrDefault(x => Rendering.Hit(x, e.GetPosition(scene))); Refresh(); e.Handled = true; };
@@ -201,7 +203,7 @@ internal sealed class Overlay : Window
             CaretBrush = Theme.Foreground, SelectionBrush = Theme.Accent, SelectionOpacity = .45,
             BorderBrush = Theme.Accent, BorderThickness = new Thickness(1), Padding = new Thickness(3),
             AcceptsReturn = true, AcceptsTab = false, TextWrapping = TextWrapping.Wrap, TextAlignment = a.Alignment,
-            Width = a.Box.Width, Height = a.Box.Height, VerticalScrollBarVisibility = ScrollBarVisibility.Auto
+            Width = a.Box.Width, Height = a.Box.Height, Opacity = a.Opacity, VerticalScrollBarVisibility = ScrollBarVisibility.Auto
         };
         PositionEditor(); canvas.Children.Add(editor);
         editor.TextChanged += (_, _) => { if (editor != null && selected != null) selected = selected with { Text = editor.Text }; };
@@ -259,6 +261,7 @@ internal sealed class Overlay : Window
                 editor.FontFamily = new FontFamily(selected.Font); editor.FontSize = selected.FontSize;
                 editor.FontWeight = selected.Bold ? FontWeights.Bold : FontWeights.Normal;
                 editor.TextAlignment = selected.Alignment; editor.Foreground = Rendering.Brush(selected.Color);
+                editor.Opacity = selected.Opacity;
                 editor.Background = selected.Background ? new SolidColorBrush(Color.FromArgb(200, 16, 24, 38)) : Brushes.Transparent;
             }
             else document.Put(selected);
@@ -269,51 +272,11 @@ internal sealed class Overlay : Window
     private void ShowProperties()
     {
         if (properties?.IsOpen == true) { properties.IsOpen = false; return; }
-        var active = selected ?? defaults;
-        var stack = new StackPanel { Width = 280, Margin = new Thickness(8) };
-        void Label(string text) => stack.Children.Add(new TextBlock { Text = text, Foreground = Theme.Foreground, Margin = new Thickness(0, 8, 0, 4) });
-        Label("Цвет"); var colors = new WrapPanel();
-        foreach (string color in new[] { "#65B7FF", "#FF635C", "#FFD166", "#63D7A1", "#FFFFFF", "#141F2E", settings.Color }.Distinct())
-        {
-            var swatch = Theme.Button("●", color, () => ChangeStyle(a => a with { Color = color }), 32);
-            swatch.Foreground = Rendering.Brush(color); colors.Children.Add(swatch);
-        }
-        stack.Children.Add(colors);
-        var hex = new TextBox { Text = active.Color, MaxLength = 7, ToolTip = "HEX: #RRGGBB" }; stack.Children.Add(hex);
-        hex.LostKeyboardFocus += (_, _) => { if (Settings.ValidColor(hex.Text)) ChangeStyle(a => a with { Color = hex.Text.ToUpperInvariant() }); else hex.Text = (selected ?? defaults).Color; };
-        Label("Толщина (пиксели)");
-        var slider = new Slider { Minimum = 1, Maximum = 40, Value = active.Width, TickFrequency = 1, IsSnapToTickEnabled = true }; stack.Children.Add(slider);
-        var number = new TextBox { Text = active.Width.ToString("0"), ToolTip = "Толщина: 1–40" }; stack.Children.Add(number);
-        slider.PreviewMouseLeftButtonUp += (_, _) => { number.Text = slider.Value.ToString("0"); ChangeStyle(a => a with { Width = slider.Value }); };
-        slider.KeyUp += (_, _) => { number.Text = slider.Value.ToString("0"); ChangeStyle(a => a with { Width = slider.Value }); };
-        number.LostKeyboardFocus += (_, _) => { if (double.TryParse(number.Text, out double w) && w is >= 1 and <= 40) { slider.Value = w; ChangeStyle(a => a with { Width = w }); } };
-        Label("Непрозрачность");
-        var opacity = new Slider { Minimum = .1, Maximum = 1, Value = active.Opacity, TickFrequency = .1, IsSnapToTickEnabled = true }; stack.Children.Add(opacity);
-        opacity.PreviewMouseLeftButtonUp += (_, _) => ChangeStyle(a => a with { Opacity = opacity.Value });
-        var glow = new CheckBox { Content = "Свечение стрелки", IsChecked = active.Glow, Foreground = Theme.Foreground, Margin = new Thickness(0, 8, 0, 0) }; stack.Children.Add(glow);
-        glow.Click += (_, _) => ChangeStyle(a => a with { Glow = glow.IsChecked == true });
-        if ((selected?.Tool ?? tool) == Tool.Text)
-        {
-            Label("Шрифт");
-            var fonts = new ComboBox { ItemsSource = Fonts.SystemFontFamilies.Select(x => x.Source).OrderBy(x => x).ToArray(), Text = active.Font, IsEditable = true }; stack.Children.Add(fonts);
-            fonts.LostKeyboardFocus += (_, _) => { if (Settings.ValidFont(fonts.Text)) ChangeStyle(a => a with { Font = fonts.Text }); else fonts.Text = (selected ?? defaults).Font; };
-            Label("Размер текста (пиксели)");
-            var size = new TextBox { Text = active.FontSize.ToString("0"), ToolTip = "Размер: 8–200" }; stack.Children.Add(size);
-            size.LostKeyboardFocus += (_, _) => { if (double.TryParse(size.Text, out double fs) && fs is >= 8 and <= 200) ChangeStyle(a => a with { FontSize = fs }); };
-            foreach (var spec in new[] { ("Полужирный", active.Bold, 0), ("Фон текста", active.Background, 1), ("Обводка текста", active.Outline, 2) })
-            {
-                var check = new CheckBox { Content = spec.Item1, IsChecked = spec.Item2, Foreground = Theme.Foreground, Margin = new Thickness(0, 6, 0, 0) }; stack.Children.Add(check);
-                check.Click += (_, _) => ChangeStyle(a => spec.Item3 switch { 0 => a with { Bold = check.IsChecked == true }, 1 => a with { Background = check.IsChecked == true }, _ => a with { Outline = check.IsChecked == true } });
-            }
-            var alignments = new[] { TextAlignment.Left, TextAlignment.Center, TextAlignment.Right };
-            var align = new ComboBox { ItemsSource = new[] { "По левому краю", "По центру", "По правому краю" }, SelectedIndex = Array.IndexOf(alignments, active.Alignment) }; stack.Children.Add(align);
-            align.SelectionChanged += (_, _) => { if (align.SelectedIndex >= 0) ChangeStyle(a => a with { Alignment = alignments[align.SelectedIndex] }); };
-            if (selected?.Tool == Tool.Text && editor == null)
-                stack.Children.Add(Theme.Button("Изменить текст", "Редактировать выбранный текст", () => { properties!.IsOpen = false; if (selected != null) BeginText(selected); }, 180));
-        }
-        stack.Children.Add(Theme.Button("Готово", "Закрыть параметры", () => { properties!.IsOpen = false; scene.Focus(); }, 100));
-        properties = new Popup { PlacementTarget = vertical, Placement = PlacementMode.Left, AllowsTransparency = true, StaysOpen = false,
-            Child = Theme.Surface(new ScrollViewer { Content = stack, MaxHeight = Math.Max(160, ActualHeight - 80), VerticalScrollBarVisibility = ScrollBarVisibility.Auto }) };
+        var content = new ToolProperties(selected ?? defaults, selected?.Tool ?? tool, ChangeStyle,
+            () => { properties!.IsOpen = false; scene.Focus(); },
+            selected?.Tool == Tool.Text && editor == null ? () => { properties!.IsOpen = false; if (selected != null) BeginText(selected); } : null)
+        { MaxHeight = Math.Max(160, Math.Min(ActualHeight, SystemParameters.WorkArea.Height) - 64) };
+        properties = new Popup { PlacementTarget = vertical, Placement = PlacementMode.Left, HorizontalOffset = -8, AllowsTransparency = true, StaysOpen = false, Child = content };
         properties.IsOpen = true;
     }
 
@@ -362,11 +325,12 @@ internal sealed class Overlay : Window
     private void Refresh()
     {
         undo.IsEnabled = document.CanUndo; redo.IsEnabled = document.CanRedo;
-        foreach (var (t, button) in tools)
+        if (paintedTool != tool) foreach (var (t, button) in tools)
         {
-            button.Background = t == tool ? Rendering.Brush("#356FA3") : t <= Tool.Text ? Rendering.Brush("#243E59") : Rendering.Brush("#25354B");
-            button.BorderBrush = t == tool ? Brushes.White : t <= Tool.Text ? Theme.Accent : Rendering.Brush("#3F5874");
+            button.Background = t == tool ? ActiveTool : t <= Tool.Text ? PrimaryTool : SecondaryTool;
+            button.BorderBrush = t == tool ? Theme.Accent : Brushes.Transparent;
         }
+        paintedTool = tool;
         vertical.Visibility = horizontal.Visibility = HasSelection && drag is not "select" ? Visibility.Visible : Visibility.Collapsed;
         status.Text = HasSelection ? "Пробел + перетаскивание: переместить область · ПКМ: выбрать объект · двойной щелчок: текст · Ctrl+C / Ctrl+S · Esc" : "Выделите область мышью · Esc — отмена";
         if (HasSelection)
@@ -414,6 +378,10 @@ internal sealed class Overlay : Window
         document.Put(text); selected = text; tool = Tool.Text; Refresh();
         if (editText) BeginText(text);
     }
+    internal Button ActiveButton => tools[tool];
+    internal Button CloseButton => closeCapture;
+    internal FrameworkElement OpenPropertiesForSmoke() { ShowProperties(); return (FrameworkElement)properties!.Child; }
+    internal void ClosePropertiesForSmoke() { properties!.IsOpen = false; scene.Focus(); }
     internal BitmapSource RenderUi()
     {
         canvas.Measure(new Size(frozen.PixelWidth, frozen.PixelHeight)); canvas.Arrange(new Rect(0, 0, frozen.PixelWidth, frozen.PixelHeight)); canvas.UpdateLayout();
@@ -423,6 +391,7 @@ internal sealed class Overlay : Window
 
     private sealed class Scene(Overlay owner) : FrameworkElement
     {
+        private readonly SelectionChrome chrome = new();
         protected override void OnRender(DrawingContext dc)
         {
             dc.DrawImage(owner.frozen, owner.ImageBounds);
@@ -440,8 +409,7 @@ internal sealed class Overlay : Window
                 }
                 if (owner.draft != null) Rendering.Draw(dc, owner.draft);
                 dc.Pop();
-                dc.DrawRectangle(null, new Pen(new SolidColorBrush(Color.FromArgb(45, 101, 183, 255)), 6), s);
-                dc.DrawRectangle(null, new Pen(Theme.Accent, 1.5), s);
+                chrome.Draw(dc, s, owner.uiScale / owner.workspace.Zoom);
                 foreach (var (_, p) in owner.Handles()) dc.DrawRectangle(Theme.Panel, new Pen(Theme.Accent, 1), new Rect(p - new Vector(3, 3), new Size(6, 6)));
                 var dimensions = new System.Windows.Media.FormattedText($"{(int)Math.Ceiling(s.Width)} × {(int)Math.Ceiling(s.Height)} px", System.Globalization.CultureInfo.CurrentUICulture,
                     FlowDirection.LeftToRight, new Typeface("Segoe UI"), 13 * owner.uiScale, Brushes.White, 1);
