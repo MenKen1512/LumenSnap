@@ -89,6 +89,7 @@ internal static class Smoke
                     Require(Descendants<Button>(window).Any(x => Equals(x.Content, "Сохранить") && x.IsVisible), "Save remains accessible");
                     Rendering.Save(RenderElement((FrameworkElement)window.Content), Path.Combine(output, "settings-ui.png"));
                     var scroll = Descendants<ScrollViewer>(window).First(); scroll.ScrollToBottom(); Pump();
+                    Require(scroll.ScrollableHeight == 0 || scroll.VerticalOffset > 0, "Settings content scrolls to the lower sections");
                     Rendering.Save(RenderElement((FrameworkElement)window.Content), Path.Combine(output, "settings-bottom-ui.png"));
                 }
                 finally { window.Close(); overlay.Activate(); Pump(); }

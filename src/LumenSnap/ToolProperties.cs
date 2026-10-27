@@ -18,7 +18,7 @@ internal sealed class ToolProperties : Border
         foreach (string color in new[] { "#65B7FF", "#FF635C", "#FFD166", "#63D7A1", "#FFFFFF", "#141F2E", active.Color }.Distinct(StringComparer.OrdinalIgnoreCase))
         {
             var b = Theme.Button("", color, () => { active = active with { Color = color }; hex.Text = color; MarkColor(color); change(a => a with { Color = color }); }, 28);
-            b.Height = 28; b.Padding = new Thickness(5); b.Content = new System.Windows.Shapes.Ellipse { Fill = Rendering.Brush(color), Stroke = Theme.Muted, StrokeThickness = .5 };
+            b.Height = 28; b.Padding = new Thickness(5); b.Content = new System.Windows.Shapes.Ellipse { Width = 14, Height = 14, Fill = Rendering.Brush(color), Stroke = Theme.Muted, StrokeThickness = .5 };
             swatches.Add(color, b); colors.Children.Add(b);
         }
         MarkColor(active.Color);

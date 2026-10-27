@@ -18,7 +18,7 @@ internal sealed class SettingsWindow : Window
         var body = new StackPanel { Margin = new Thickness(0, 0, 8, 0) };
         layout.Children.Add(new ScrollViewer { Content = body, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
         uint key = current.HotkeyCode, mods = current.HotkeyModifiers;
-        var binding = new TextBox { Text = current.HotkeyLabel, IsReadOnly = true, FontSize = 17, Padding = new Thickness(9, 7) };
+        var binding = new TextBox { Text = current.HotkeyLabel, IsReadOnly = true, FontSize = 17, Padding = new Thickness(9, 7, 9, 7) };
         binding.PreviewKeyDown += (_, e) =>
         {
             var k = e.Key == Key.System ? e.SystemKey : e.Key;
